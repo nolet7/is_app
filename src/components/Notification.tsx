@@ -14,7 +14,7 @@ export const Notification: React.FC<NotificationProps> = ({
   type, 
   onClose, 
   autoClose = true, 
-  duration = 5000 
+  duration = 4000 
 }) => {
   useEffect(() => {
     if (autoClose) {
@@ -27,7 +27,7 @@ export const Notification: React.FC<NotificationProps> = ({
   const Icon = type === 'success' ? CheckCircle : AlertCircle;
 
   return (
-    <div className={`${bgColor} text-white px-4 py-3 rounded-lg shadow-lg animate-slide-in flex items-center space-x-3`}>
+    <div className={`${bgColor} text-white px-4 py-3 rounded-lg shadow-lg animate-slide-in flex items-center space-x-3 min-w-80`}>
       <Icon className="h-5 w-5 flex-shrink-0" />
       <span className="flex-1 text-sm font-medium">{message}</span>
       <button

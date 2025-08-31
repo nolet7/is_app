@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, User } from 'lucide-react';
+import { Package, RefreshCw } from 'lucide-react';
 
 interface User {
   id: string;
@@ -11,9 +11,10 @@ interface User {
 interface HeaderProps {
   user: User | null;
   onRefresh: () => void;
+  isRefreshing: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ user, onRefresh }) => {
+export const Header: React.FC<HeaderProps> = ({ user, onRefresh, isRefreshing }) => {
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -29,19 +30,17 @@ export const Header: React.FC<HeaderProps> = ({ user, onRefresh }) => {
           
           <div className="flex items-center space-x-4">
             {user && (
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <User className="h-4 w-4" />
-                <span>Welcome, {user.name}</span>
-                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                  {user.role}
-                </span>
+              <div className="text-sm text-gray-600">
+                Welcome, <span className="font-medium">{user.name}</span>
               </div>
             )}
             <button
               onClick={onRefresh}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              disabled={isRefreshing}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
-              Refresh
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span>Refresh</span>
             </button>
           </div>
         </div>

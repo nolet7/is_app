@@ -1,0 +1,143 @@
+version: '3.8'
+
+services:
+  # Frontend
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+    environment:
+      - NODE_ENV=production
+    networks:
+      - microservices
+
+  # API Gateway
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "3001:3001"
+    depends_on:
+      - orders-v1
+      - orders-v2
+      - inventory-v1
+      - inventory-v2
+      - users-v1
+      - users-v2
+      - reviews-v1
+      - reviews-v2
+      - reviews-v3
+      - ratings-v1
+      - ratings-v2
+    environment:
+      - ORDERS_SERVICE_URL=http://orders-v1:5001
+      - INVENTORY_SERVICE_URL=http://inventory-v1:5002
+      - USERS_SERVICE_URL=http://users-v1:5003
+      - REVIEWS_SERVICE_URL=http://reviews-v1:5004
+      - RATINGS_SERVICE_URL=http://ratings-v1:5005
+    networks:
+      - microservices
+
+  # Orders Service - Version 1
+  orders-v1:
+    build: ./services/orders
+    environment:
+      - SERVICE_VERSION=v1
+      - PORT=5001
+    networks:
+      - microservices
+
+  # Orders Service - Version 2
+  orders-v2:
+    build: ./services/orders
+    environment:
+      - SERVICE_VERSION=v2
+      - PORT=5001
+    networks:
+      - microservices
+
+  # Inventory Service - Version 1
+  inventory-v1:
+    build: ./services/inventory
+    environment:
+      - SERVICE_VERSION=v1
+      - PORT=5002
+    networks:
+      - microservices
+
+  # Inventory Service - Version 2
+  inventory-v2:
+    build: ./services/inventory
+    environment:
+      - SERVICE_VERSION=v2
+      - PORT=5002
+    networks:
+      - microservices
+
+  # Users Service - Version 1
+  users-v1:
+    build: ./services/users
+    environment:
+      - SERVICE_VERSION=v1
+      - PORT=5003
+    networks:
+      - microservices
+
+  # Users Service - Version 2
+  users-v2:
+    build: ./services/users
+    environment:
+      - SERVICE_VERSION=v2
+      - PORT=5003
+    networks:
+      - microservices
+
+  # Reviews Service - Version 1
+  reviews-v1:
+    build: ./services/reviews
+    environment:
+      - SERVICE_VERSION=v1
+      - PORT=5004
+    networks:
+      - microservices
+
+  # Reviews Service - Version 2
+  reviews-v2:
+    build: ./services/reviews
+    environment:
+      - SERVICE_VERSION=v2
+      - PORT=5004
+    networks:
+      - microservices
+
+  # Reviews Service - Version 3
+  reviews-v3:
+    build: ./services/reviews
+    environment:
+      - SERVICE_VERSION=v3
+      - PORT=5004
+    networks:
+      - microservices
+
+  # Ratings Service - Version 1
+  ratings-v1:
+    build: ./services/ratings
+    environment:
+      - SERVICE_VERSION=v1
+      - PORT=5005
+    networks:
+      - microservices
+
+  # Ratings Service - Version 2
+  ratings-v2:
+    build: ./services/ratings
+    environment:
+      - SERVICE_VERSION=v2
+      - PORT=5005
+    networks:
+      - microservices
+
+networks:
+  microservices:
+    driver: bridge

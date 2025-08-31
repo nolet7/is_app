@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-v1
+  labels:
+    app: inventory
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: inventory
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: inventory
+        version: v1
+    spec:
+      containers:
+      - name: inventory
+        image: istio-demo/inventory:latest
+        ports:
+        - containerPort: 5002
+        env:
+        - name: SERVICE_VERSION
+          value: "v1"
+        - name: PORT
+          value: "5002"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5002
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5002
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-v2
+  labels:
+    app: inventory
+    version: v2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inventory
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: inventory
+        version: v2
+    spec:
+      containers:
+      - name: inventory
+        image: istio-demo/inventory:latest
+        ports:
+        - containerPort: 5002
+        env:
+        - name: SERVICE_VERSION
+          value: "v2"
+        - name: PORT
+          value: "5002"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5002
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5002
+          initialDelaySeconds: 5
+          periodSeconds: 5

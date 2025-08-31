@@ -2,8 +2,7 @@
 global:
   env: dev
   imageTag: latest
-  imagePullPolicy: IfNotPresent   # friendlier for local caching
-
+  imagePullPolicy: IfNotPresent # friendlier for local caching
 frontend:
   replicaCount: 1
   ingress:
@@ -16,7 +15,6 @@ frontend:
         paths:
           - path: /
             pathType: Prefix
-
   resources:
     requests:
       memory: "64Mi"
@@ -24,7 +22,6 @@ frontend:
     limits:
       memory: "128Mi"
       cpu: "100m"
-
 apiGateway:
   replicaCount: 1
   resources:
@@ -34,7 +31,6 @@ apiGateway:
     limits:
       memory: "128Mi"
       cpu: "100m"
-
 microservices:
   orders:
     versions:
@@ -50,7 +46,20 @@ microservices:
             cpu: "100m"
       v2:
         enabled: false
-
+    image:
+      repository: stock-orders
+      tag: ""
+      pullPolicy: ""
+    service:
+      port: 5001
+      targetPort: 5001
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
   inventory:
     versions:
       v1:
@@ -65,7 +74,13 @@ microservices:
             cpu: "100m"
       v2:
         enabled: false
-
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
   users:
     versions:
       v1:
@@ -80,7 +95,13 @@ microservices:
             cpu: "100m"
       v2:
         enabled: false
-
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
   reviews:
     versions:
       v1:
@@ -97,7 +118,13 @@ microservices:
         enabled: false
       v3:
         enabled: false
-
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
   ratings:
     versions:
       v1:
@@ -112,13 +139,48 @@ microservices:
             cpu: "100m"
       v2:
         enabled: false
-
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
 istio:
-  enabled: false  # Dev is kept simple: no Istio sidecars, no mTLS
-
+  enabled: false # Dev is kept simple: no Istio sidecars, no mTLS
 monitoring:
-  enabled: false  # Dev doesn’t run Prometheus/Grafana
-
+  enabled: false # Dev doesn’t run Prometheus/Grafana
 autoscaling:
-  enabled: false  # Prevent HPA from causing Pending pods in dev
-
+  enabled: false # Prevent HPA from causing Pending pods in dev
+inventory:
+  image:
+    repository: stock-inventory
+    tag: ""
+    pullPolicy: ""
+  service:
+    port: 5002
+    targetPort: 5002
+users:
+  image:
+    repository: stock-users
+    tag: ""
+    pullPolicy: ""
+  service:
+    port: 5003
+    targetPort: 5003
+reviews:
+  image:
+    repository: stock-reviews
+    tag: ""
+    pullPolicy: ""
+  service:
+    port: 5004
+    targetPort: 5004
+ratings:
+  image:
+    repository: stock-ratings
+    tag: ""
+    pullPolicy: ""
+  service:
+    port: 5005
+    targetPort: 5005

@@ -3,7 +3,6 @@ global:
   env: staging
   imageTag: staging-latest
   imagePullPolicy: Always
-
 frontend:
   replicaCount: 2
   ingress:
@@ -21,7 +20,6 @@ frontend:
       - secretName: stock-app-staging-tls
         hosts:
           - stock-app-staging.yourcompany.com
-
   resources:
     requests:
       memory: "128Mi"
@@ -29,7 +27,6 @@ frontend:
     limits:
       memory: "256Mi"
       cpu: "200m"
-
 apiGateway:
   replicaCount: 2
   resources:
@@ -42,7 +39,6 @@ apiGateway:
   service:
     port: 3001
     targetPort: 3001
-
 microservices:
   orders:
     versions:
@@ -57,12 +53,15 @@ microservices:
       targetPort: 5001
     resources:
       requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
         memory: "128Mi"
         cpu: "100m"
-      limits:
-        memory: "256Mi"
-        cpu: "200m"
-
+    image:
+      repository: stock-orders
+      tag: ""
+      pullPolicy: ""
   inventory:
     versions:
       v1:
@@ -76,12 +75,11 @@ microservices:
       targetPort: 5002
     resources:
       requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
         memory: "128Mi"
         cpu: "100m"
-      limits:
-        memory: "256Mi"
-        cpu: "200m"
-
   users:
     versions:
       v1:
@@ -95,12 +93,11 @@ microservices:
       targetPort: 5003
     resources:
       requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
         memory: "128Mi"
         cpu: "100m"
-      limits:
-        memory: "256Mi"
-        cpu: "200m"
-
   reviews:
     versions:
       v1:
@@ -117,12 +114,11 @@ microservices:
       targetPort: 5004
     resources:
       requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
         memory: "128Mi"
         cpu: "100m"
-      limits:
-        memory: "256Mi"
-        cpu: "200m"
-
   ratings:
     versions:
       v1:
@@ -136,18 +132,16 @@ microservices:
       targetPort: 5005
     resources:
       requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
         memory: "128Mi"
         cpu: "100m"
-      limits:
-        memory: "256Mi"
-        cpu: "200m"
-
 istio:
   enabled: true
   gateway:
     hosts:
       - "stock-app-staging.yourcompany.com"
-
   virtualService:
     timeout: 30s
     retries:
@@ -161,7 +155,6 @@ istio:
       abort:
         percentage: 2
         httpStatus: 503
-
   destinationRule:
     enabled: true
     trafficPolicy:
@@ -177,29 +170,55 @@ istio:
         interval: 30s
         baseEjectionTime: 30s
         maxEjectionPercent: 50
-
   peerAuthentication:
     enabled: true
     mtlsMode: STRICT
-
   authorizationPolicy:
     enabled: true
-
 serviceAccount:
   create: true
   name: ""
-
 monitoring:
   enabled: true
   serviceMonitor:
     enabled: true
     interval: 15s
     path: /metrics
-
 autoscaling:
   enabled: true
   minReplicas: 2
   maxReplicas: 5
   targetCPUUtilizationPercentage: 80
   targetMemoryUtilizationPercentage: 80
-
+inventory:
+  image:
+    repository: stock-inventory
+    tag: ""
+    pullPolicy: ""
+  service:
+    port: 5002
+    targetPort: 5002
+users:
+  image:
+    repository: stock-users
+    tag: ""
+    pullPolicy: ""
+  service:
+    port: 5003
+    targetPort: 5003
+reviews:
+  image:
+    repository: stock-reviews
+    tag: ""
+    pullPolicy: ""
+  service:
+    port: 5004
+    targetPort: 5004
+ratings:
+  image:
+    repository: stock-ratings
+    tag: ""
+    pullPolicy: ""
+  service:
+    port: 5005
+    targetPort: 5005

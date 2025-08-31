@@ -4,7 +4,6 @@ global:
   imageTag: latest
   imagePullPolicy: IfNotPresent
   env: dev
-
   labels:
     app.kubernetes.io/name: stock-app
     app.kubernetes.io/instance: stock-app
@@ -12,7 +11,6 @@ global:
     app.kubernetes.io/component: microservice
     app.kubernetes.io/part-of: stock-management-platform
     app.kubernetes.io/managed-by: helm
-
 # Frontend configuration
 frontend:
   enabled: true
@@ -22,15 +20,12 @@ frontend:
     repository: stock-frontend
     tag: ""
     pullPolicy: ""
-
   service:
     type: ClusterIP
     port: 80
     targetPort: 80
-
   ingress:
     enabled: false
-
   resources:
     requests:
       memory: "64Mi"
@@ -38,21 +33,18 @@ frontend:
     limits:
       memory: "128Mi"
       cpu: "100m"
-
   livenessProbe:
     httpGet:
       path: /health
       port: 80
     initialDelaySeconds: 20
     periodSeconds: 10
-
   readinessProbe:
     httpGet:
       path: /health
       port: 80
     initialDelaySeconds: 5
     periodSeconds: 5
-
 # API Gateway
 apiGateway:
   enabled: true
@@ -62,12 +54,10 @@ apiGateway:
     repository: stock-api-gateway
     tag: ""
     pullPolicy: ""
-
   service:
     type: ClusterIP
     port: 3001
     targetPort: 3001
-
   resources:
     requests:
       memory: "64Mi"
@@ -75,7 +65,6 @@ apiGateway:
     limits:
       memory: "128Mi"
       cpu: "100m"
-
 # Microservices (lightweight, single replica by default)
 microservices:
   orders:
@@ -94,7 +83,13 @@ microservices:
       limits:
         memory: "128Mi"
         cpu: "100m"
-
+    image:
+      repository: stock-orders
+      tag: ""
+      pullPolicy: ""
+    service:
+      port: 5001
+      targetPort: 5001
   inventory:
     enabled: true
     versions:
@@ -111,7 +106,6 @@ microservices:
       limits:
         memory: "128Mi"
         cpu: "100m"
-
   users:
     enabled: true
     versions:
@@ -128,7 +122,6 @@ microservices:
       limits:
         memory: "128Mi"
         cpu: "100m"
-
   reviews:
     enabled: true
     versions:
@@ -147,7 +140,6 @@ microservices:
       limits:
         memory: "128Mi"
         cpu: "100m"
-
   ratings:
     enabled: true
     versions:
@@ -164,19 +156,47 @@ microservices:
       limits:
         memory: "128Mi"
         cpu: "100m"
-
 # Istio (disabled in dev baseline to avoid sidecar overhead)
 istio:
   enabled: false
-
 # Monitoring (disabled for dev baseline)
 monitoring:
   enabled: false
-
 # Autoscaling (disabled in dev baseline to avoid Pending pods)
 autoscaling:
   enabled: false
   minReplicas: 1
   maxReplicas: 3
   targetCPUUtilizationPercentage: 80
-
+inventory:
+  image:
+    repository: stock-inventory
+    tag: ""
+    pullPolicy: ""
+  service:
+    port: 5002
+    targetPort: 5002
+users:
+  image:
+    repository: stock-users
+    tag: ""
+    pullPolicy: ""
+  service:
+    port: 5003
+    targetPort: 5003
+reviews:
+  image:
+    repository: stock-reviews
+    tag: ""
+    pullPolicy: ""
+  service:
+    port: 5004
+    targetPort: 5004
+ratings:
+  image:
+    repository: stock-ratings
+    tag: ""
+    pullPolicy: ""
+  service:
+    port: 5005
+    targetPort: 5005

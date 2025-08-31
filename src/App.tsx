@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Package, TrendingUp, MessageSquare, Star, Search, Filter, RefreshCw
-} from 'lucide-react';
 import { Header } from './components/Header';
 import { ProductCard } from './components/ProductCard';
 import { OrderModal } from './components/OrderModal';
 import { ReviewModal } from './components/ReviewModal';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { Notification } from './components/Notification';
+import { Package, TrendingUp, MessageSquare, Star, Search, Filter } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -63,8 +61,6 @@ interface NotificationItem {
   type: 'success' | 'error';
 }
 
-const API_BASE_URL = '/api';
-
 function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [user, setUser] = useState<User | null>(null);
@@ -92,7 +88,7 @@ function App() {
   // API functions
   const fetchProducts = async (): Promise<Product[]> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/inventory`);
+      const response = await fetch('/api/inventory');
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       return data.products || [];
@@ -104,7 +100,7 @@ function App() {
 
   const fetchUser = async (): Promise<User> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/users/current`);
+      const response = await fetch('/api/users/current');
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       return data.user;
@@ -116,7 +112,7 @@ function App() {
 
   const fetchRatings = async (productId: string): Promise<Rating> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/ratings/${productId}`);
+      const response = await fetch(`/api/ratings/${productId}`);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       return data.rating;
@@ -134,7 +130,7 @@ function App() {
 
   const fetchReviews = async (productId: string): Promise<Review[]> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/reviews/${productId}`);
+      const response = await fetch(`/api/reviews/${productId}`);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       return data.reviews || [];
@@ -146,7 +142,7 @@ function App() {
 
   const createOrder = async (productId: string, quantity: number): Promise<Order> => {
     const product = products.find(p => p.id === productId);
-    const response = await fetch(`${API_BASE_URL}/orders`, {
+    const response = await fetch('/api/orders', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -169,7 +165,7 @@ function App() {
   };
 
   const submitReview = async (productId: string, rating: number, comment: string): Promise<Review> => {
-    const response = await fetch(`${API_BASE_URL}/reviews`, {
+    const response = await fetch('/api/reviews', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

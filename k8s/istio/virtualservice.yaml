@@ -10,7 +10,6 @@ spec:
   gateways:
   - stock-app-gateway
   http:
-  # Frontend routes
   - match:
     - uri:
         prefix: "/"
@@ -50,11 +49,11 @@ spec:
     fault:
       delay:
         percentage:
-          value: 10
+          value: 10.0
         fixedDelay: 2s
       abort:
         percentage:
-          value: 5
+          value: 5.0
         httpStatus: 503
 
 ---
@@ -121,7 +120,7 @@ spec:
     fault:
       delay:
         percentage:
-          value: 15
+          value: 15.0
         fixedDelay: 1s
 
 ---
@@ -192,7 +191,7 @@ spec:
     fault:
       delay:
         percentage:
-          value: 20
+          value: 20.0
         fixedDelay: 2s
 
 ---

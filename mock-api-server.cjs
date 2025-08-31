@@ -4,349 +4,276 @@ const cors = require('cors');
 const app = express();
 const PORT = 3001;
 
-// CORS configuration
-app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-user', 'x-canary', 'x-feature-flag']
-}));
-
+// Middleware
+app.use(cors());
 app.use(express.json());
 
-// Middleware to log requests
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-  next();
-});
-
 // Mock data
-const mockInventory = [
+const mockProducts = [
   {
     id: 'prod-001',
-    name: 'Wireless Headphones',
-    price: 99.99,
+    name: 'Premium Wireless Headphones',
     stock: 25,
+    price: 199.99,
     category: 'Electronics',
     description: 'High-quality wireless headphones with noise cancellation'
   },
   {
     id: 'prod-002',
-    name: 'Smart Watch',
-    price: 199.99,
+    name: 'Smart Fitness Watch',
     stock: 15,
+    price: 299.99,
     category: 'Electronics',
-    description: 'Feature-rich smartwatch with health monitoring'
+    description: 'Advanced fitness tracking with heart rate monitoring'
   },
   {
     id: 'prod-003',
-    name: 'Coffee Maker',
+    name: 'Organic Coffee Beans',
+    stock: 50,
+    price: 24.99,
+    category: 'Food',
+    description: 'Premium organic coffee beans from sustainable farms'
+  },
+  {
+    id: 'prod-004',
+    name: 'Yoga Mat Pro',
+    stock: 30,
     price: 79.99,
-    stock: 8,
-    category: 'Appliances',
-    description: 'Programmable coffee maker with thermal carafe'
+    category: 'Sports',
+    description: 'Professional-grade yoga mat with superior grip'
+  },
+  {
+    id: 'prod-005',
+    name: 'Bluetooth Speaker',
+    stock: 20,
+    price: 89.99,
+    category: 'Electronics',
+    description: 'Portable wireless speaker with premium sound quality'
   }
 ];
 
 const mockUser = {
-  id: 'user-001',
+  id: 'usr-001',
   name: 'John Doe',
   email: 'john.doe@example.com',
-  role: 'customer',
-  preferences: {
-    notifications: true,
-    theme: 'light'
-  }
+  role: 'Premium Customer',
+  joinedAt: '2023-01-15',
+  active: true,
+  orders_count: 12,
+  total_spent: 1247.89
 };
-
-const mockOrders = [
-  {
-    id: 'order-001',
-    userId: 'user-001',
-    items: [
-      { productId: 'prod-001', quantity: 1, price: 99.99 }
-    ],
-    total: 99.99,
-    status: 'delivered',
-    createdAt: '2024-01-15T10:30:00Z'
-  },
-  {
-    id: 'order-002',
-    userId: 'user-001',
-    items: [
-      { productId: 'prod-002', quantity: 1, price: 199.99 }
-    ],
-    total: 199.99,
-    status: 'processing',
-    createdAt: '2024-01-20T14:15:00Z'
-  }
-];
-
-const mockReviews = [
-  {
-    id: 'review-001',
-    productId: 'prod-001',
-    userId: 'user-001',
-    rating: 5,
-    comment: 'Excellent sound quality and comfortable fit!',
-    createdAt: '2024-01-16T09:00:00Z'
-  },
-  {
-    id: 'review-002',
-    productId: 'prod-002',
-    userId: 'user-001',
-    rating: 4,
-    comment: 'Great features but battery could last longer.',
-    createdAt: '2024-01-18T16:30:00Z'
-  }
-];
 
 const mockRatings = {
-  overall_stats: {
-    average_rating: 4.5,
-    total_reviews: 2
+  'prod-001': {
+    productId: 'prod-001',
+    averageRating: 4.5,
+    totalReviews: 23,
+    distribution: { 5: 15, 4: 6, 3: 2, 2: 0, 1: 0 }
   },
-  products: {
-    'prod-001': { average: 5.0, count: 1 },
-    'prod-002': { average: 4.0, count: 1 },
-    'prod-003': { average: 0, count: 0 }
+  'prod-002': {
+    productId: 'prod-002',
+    averageRating: 4.2,
+    totalReviews: 18,
+    distribution: { 5: 8, 4: 7, 3: 3, 2: 0, 1: 0 }
+  },
+  'prod-003': {
+    productId: 'prod-003',
+    averageRating: 4.8,
+    totalReviews: 31,
+    distribution: { 5: 25, 4: 5, 3: 1, 2: 0, 1: 0 }
+  },
+  'prod-004': {
+    productId: 'prod-004',
+    averageRating: 4.3,
+    totalReviews: 14,
+    distribution: { 5: 7, 4: 5, 3: 2, 2: 0, 1: 0 }
+  },
+  'prod-005': {
+    productId: 'prod-005',
+    averageRating: 4.1,
+    totalReviews: 9,
+    distribution: { 5: 4, 4: 3, 3: 2, 2: 0, 1: 0 }
   }
 };
 
-// Health check
+const mockReviews = {
+  'prod-001': [
+    {
+      id: 'rev-001',
+      productId: 'prod-001',
+      userId: 'usr-002',
+      userName: 'Sarah Wilson',
+      rating: 5,
+      comment: 'Amazing sound quality and comfort. Worth every penny!',
+      createdAt: '2024-01-15T10:30:00Z',
+      verified: true
+    },
+    {
+      id: 'rev-002',
+      productId: 'prod-001',
+      userId: 'usr-003',
+      userName: 'Mike Johnson',
+      rating: 4,
+      comment: 'Great headphones, battery life could be better.',
+      createdAt: '2024-01-10T14:20:00Z',
+      verified: true
+    }
+  ],
+  'prod-002': [
+    {
+      id: 'rev-003',
+      productId: 'prod-002',
+      userId: 'usr-004',
+      userName: 'Emily Chen',
+      rating: 4,
+      comment: 'Excellent fitness tracking features. Very accurate.',
+      createdAt: '2024-01-12T09:15:00Z',
+      verified: true
+    }
+  ],
+  'prod-003': [
+    {
+      id: 'rev-004',
+      productId: 'prod-003',
+      userId: 'usr-005',
+      userName: 'David Brown',
+      rating: 5,
+      comment: 'Best coffee I\'ve ever had! Rich flavor and aroma.',
+      createdAt: '2024-01-14T16:45:00Z',
+      verified: true
+    }
+  ]
+};
+
+// Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'healthy', 
-    service: 'mock-api-gateway',
-    version: 'v1',
-    timestamp: Date.now()
-  });
+  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
-// Inventory Service Routes
+// Inventory endpoints
 app.get('/api/inventory', (req, res) => {
-  res.json({
-    service: 'inventory',
-    version: 'v1',
-    products: mockInventory,
-    total_items: mockInventory.length,
-    total_stock: mockInventory.reduce((sum, item) => sum + item.stock, 0),
-    timestamp: Date.now()
-  });
+  res.json({ products: mockProducts });
 });
 
-app.get('/api/inventory/:productId', (req, res) => {
-  const product = mockInventory.find(p => p.id === req.params.productId);
+app.get('/api/inventory/:id', (req, res) => {
+  const product = mockProducts.find(p => p.id === req.params.id);
   if (!product) {
-    return res.status(404).json({
-      error: 'Product not found',
-      service: 'inventory',
-      timestamp: Date.now()
-    });
+    return res.status(404).json({ error: 'Product not found' });
   }
-  res.json({
-    service: 'inventory',
-    version: 'v1',
-    product,
-    timestamp: Date.now()
-  });
+  res.json({ product });
 });
 
-// Orders Service Routes
+// Users endpoints
+app.get('/api/users/current', (req, res) => {
+  res.json({ user: mockUser });
+});
+
+app.get('/api/users/:id', (req, res) => {
+  if (req.params.id === mockUser.id) {
+    res.json({ user: mockUser });
+  } else {
+    res.status(404).json({ error: 'User not found' });
+  }
+});
+
+// Orders endpoints
 app.post('/api/orders', (req, res) => {
-  const newOrder = {
-    id: `order-${Date.now()}`,
-    userId: req.body.userId || 'user-001',
-    items: req.body.items || [],
-    total: req.body.total || 0,
-    status: 'pending',
-    createdAt: new Date().toISOString()
+  const { productId, quantity, userId, total } = req.body;
+  
+  const product = mockProducts.find(p => p.id === productId);
+  if (!product) {
+    return res.status(404).json({ error: 'Product not found' });
+  }
+  
+  if (quantity > product.stock) {
+    return res.status(400).json({ error: 'Insufficient stock' });
+  }
+  
+  const order = {
+    id: `ord-${Date.now()}`,
+    userId,
+    productId,
+    quantity,
+    total,
+    status: 'confirmed',
+    createdAt: Date.now()
   };
   
-  mockOrders.push(newOrder);
+  // Update stock
+  product.stock -= quantity;
   
-  res.status(201).json({
-    service: 'orders',
-    version: 'v1',
-    order: newOrder,
-    timestamp: Date.now()
-  });
+  res.json({ order });
 });
 
-app.get('/api/orders', (req, res) => {
-  res.json({
-    service: 'orders',
-    version: 'v1',
-    orders: mockOrders,
-    total_orders: mockOrders.length,
-    timestamp: Date.now()
-  });
+app.get('/api/orders/:userId', (req, res) => {
+  res.json({ orders: [] }); // Mock empty orders for now
 });
 
-app.get('/api/orders/:orderId', (req, res) => {
-  const order = mockOrders.find(o => o.id === req.params.orderId);
-  if (!order) {
-    return res.status(404).json({
-      error: 'Order not found',
-      service: 'orders',
-      timestamp: Date.now()
-    });
-  }
-  res.json({
-    service: 'orders',
-    version: 'v1',
-    order,
-    timestamp: Date.now()
-  });
-});
-
-// Users Service Routes
-app.get('/api/users/current', (req, res) => {
-  res.json({
-    service: 'users',
-    version: 'v1',
-    user: mockUser,
-    timestamp: Date.now()
-  });
-});
-
-app.get('/api/users/:userId', (req, res) => {
-  if (req.params.userId !== mockUser.id) {
-    return res.status(404).json({
-      error: 'User not found',
-      service: 'users',
-      timestamp: Date.now()
-    });
-  }
-  res.json({
-    service: 'users',
-    version: 'v1',
-    user: mockUser,
-    timestamp: Date.now()
-  });
-});
-
-// Reviews Service Routes
+// Reviews endpoints
 app.get('/api/reviews/:productId', (req, res) => {
-  const productReviews = mockReviews.filter(r => r.productId === req.params.productId);
-  res.json({
-    service: 'reviews',
-    version: 'v1',
-    reviews: productReviews,
-    product_id: req.params.productId,
-    total_reviews: productReviews.length,
-    timestamp: Date.now()
-  });
+  const reviews = mockReviews[req.params.productId] || [];
+  res.json({ reviews });
 });
 
 app.post('/api/reviews', (req, res) => {
-  const newReview = {
-    id: `review-${Date.now()}`,
-    productId: req.body.productId,
-    userId: req.body.userId || 'user-001',
-    rating: req.body.rating,
-    comment: req.body.comment,
-    createdAt: new Date().toISOString()
+  const { productId, rating, comment, userId, userName } = req.body;
+  
+  const review = {
+    id: `rev-${Date.now()}`,
+    productId,
+    userId,
+    userName,
+    rating,
+    comment,
+    createdAt: new Date().toISOString(),
+    verified: true
   };
   
-  mockReviews.push(newReview);
+  // Add to mock reviews
+  if (!mockReviews[productId]) {
+    mockReviews[productId] = [];
+  }
+  mockReviews[productId].unshift(review);
   
-  res.status(201).json({
-    service: 'reviews',
-    version: 'v1',
-    review: newReview,
-    timestamp: Date.now()
-  });
+  // Update ratings
+  const currentRating = mockRatings[productId];
+  if (currentRating) {
+    const newTotal = currentRating.totalReviews + 1;
+    const newAverage = ((currentRating.averageRating * currentRating.totalReviews) + rating) / newTotal;
+    
+    mockRatings[productId] = {
+      ...currentRating,
+      averageRating: newAverage,
+      totalReviews: newTotal
+    };
+  }
+  
+  res.json({ review });
 });
 
-app.get('/api/reviews', (req, res) => {
-  res.json({
-    service: 'reviews',
-    version: 'v1',
-    reviews: mockReviews,
-    total_reviews: mockReviews.length,
-    timestamp: Date.now()
-  });
-});
-
-// Ratings Service Routes
+// Ratings endpoints
 app.get('/api/ratings/:productId', (req, res) => {
-  const productRating = mockRatings.products[req.params.productId] || { average: 0, count: 0 };
-  res.json({
-    service: 'ratings',
-    version: 'v1',
-    product_id: req.params.productId,
-    rating: productRating,
-    timestamp: Date.now()
-  });
-});
-
-app.get('/api/ratings', (req, res) => {
-  res.json({
-    service: 'ratings',
-    version: 'v1',
-    overall_stats: mockRatings.overall_stats,
-    products: mockRatings.products,
-    timestamp: Date.now()
-  });
-});
-
-// Aggregate endpoint for dashboard
-app.get('/api/dashboard', (req, res) => {
-  const dashboard = {
-    service: 'mock-api-gateway',
-    version: 'v1',
-    inventory: {
-      total_products: mockInventory.length,
-      total_stock: mockInventory.reduce((sum, item) => sum + item.stock, 0)
-    },
-    ratings: mockRatings.overall_stats,
-    orders: {
-      total_orders: mockOrders.length,
-      pending_orders: mockOrders.filter(o => o.status === 'pending').length
-    },
-    timestamp: Date.now()
+  const rating = mockRatings[req.params.productId] || {
+    productId: req.params.productId,
+    averageRating: 0,
+    totalReviews: 0,
+    distribution: {}
   };
-
-  res.json(dashboard);
+  res.json({ rating });
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({
-    error: 'Internal server error',
-    service: 'mock-api-gateway',
-    message: err.message,
-    timestamp: Date.now()
-  });
+  console.error('API Error:', err);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 // 404 handler
 app.use('*', (req, res) => {
-  res.status(404).json({
-    error: 'Endpoint not found',
-    service: 'mock-api-gateway',
-    path: req.originalUrl,
-    timestamp: Date.now()
-  });
+  res.status(404).json({ error: 'Endpoint not found' });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Mock API Gateway running on port ${PORT}`);
-  console.log('Available endpoints:');
-  console.log('  GET  /health');
-  console.log('  GET  /api/inventory');
-  console.log('  GET  /api/inventory/:productId');
-  console.log('  POST /api/orders');
-  console.log('  GET  /api/orders');
-  console.log('  GET  /api/orders/:orderId');
-  console.log('  GET  /api/users/current');
-  console.log('  GET  /api/users/:userId');
-  console.log('  GET  /api/reviews/:productId');
-  console.log('  POST /api/reviews');
-  console.log('  GET  /api/reviews');
-  console.log('  GET  /api/ratings/:productId');
-  console.log('  GET  /api/ratings');
-  console.log('  GET  /api/dashboard');
+app.listen(PORT, () => {
+  console.log(`Mock API server running on port ${PORT}`);
+  console.log(`Health check: http://localhost:${PORT}/health`);
 });

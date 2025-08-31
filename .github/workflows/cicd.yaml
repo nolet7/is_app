@@ -147,12 +147,21 @@ jobs:
       uses: aquasecurity/trivy-action@master
       with:
         image-ref: '${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-frontend:${{ github.sha }}'
+        format: 'table'
+        exit-code: '0'
+        ignore-unfixed: true
+
+    - name: Run Trivy and upload SARIF (only for public repos)
+      if: github.event.repository.private == false
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: '${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-frontend:${{ github.sha }}'
         format: 'sarif'
         output: 'trivy-results.sarif'
 
-    - name: Upload Trivy scan results
+    - name: Upload Trivy scan results (only for public repos)
+      if: github.event.repository.private == false
       uses: github/codeql-action/upload-sarif@v3
-      if: always()
       with:
         sarif_file: 'trivy-results.sarif'
 

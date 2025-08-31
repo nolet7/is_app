@@ -25,7 +25,7 @@ frontend:
       - secretName: stock-app-prod-tls
         hosts:
           - stock-app.yourcompany.com
-  
+
   resources:
     requests:
       memory: "256Mi"
@@ -33,7 +33,7 @@ frontend:
     limits:
       memory: "512Mi"
       cpu: "500m"
-  
+
   affinity:
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
@@ -56,7 +56,7 @@ apiGateway:
     limits:
       memory: "1Gi"
       cpu: "1000m"
-  
+
   affinity:
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
@@ -98,7 +98,7 @@ microservices:
                 values:
                 - orders
             topologyKey: kubernetes.io/hostname
-  
+
   inventory:
     versions:
       v1:
@@ -126,7 +126,7 @@ microservices:
                 values:
                 - inventory
             topologyKey: kubernetes.io/hostname
-  
+
   users:
     versions:
       v1:
@@ -154,7 +154,7 @@ microservices:
                 values:
                 - users
             topologyKey: kubernetes.io/hostname
-  
+
   reviews:
     versions:
       v1:
@@ -185,7 +185,7 @@ microservices:
                 values:
                 - reviews
             topologyKey: kubernetes.io/hostname
-  
+
   ratings:
     versions:
       v1:
@@ -222,14 +222,35 @@ istio:
     tls:
       enabled: true
       secretName: stock-app-prod-tls
-  
+
   virtualService:
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
     faultInjection:
       enabled: false  # Disable fault injection in production
-  
+
+  destinationRule:
+    enabled: true
+    trafficPolicy:
+      connectionPool:
+        tcp:
+          maxConnections: 50
+        http:
+          http1MaxPendingRequests: 50
+          maxRequestsPerConnection: 10
+      outlierDetection:
+        consecutive5xxErrors: 5
+        consecutiveGatewayErrors: 5
+        interval: 30s
+        baseEjectionTime: 60s
+        maxEjectionPercent: 50
+
   peerAuthentication:
+    enabled: true
     mtlsMode: STRICT
-  
+
   authorizationPolicy:
     enabled: true
 
@@ -238,12 +259,12 @@ monitoring:
   serviceMonitor:
     enabled: true
     interval: 30s
-  
+
   grafana:
     enabled: true
     dashboards:
       enabled: true
-  
+
   prometheus:
     enabled: true
     rules:
@@ -255,3 +276,4 @@ autoscaling:
   maxReplicas: 20
   targetCPUUtilizationPercentage: 60
   targetMemoryUtilizationPercentage: 70
+

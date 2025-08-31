@@ -21,7 +21,7 @@ frontend:
       - secretName: stock-app-staging-tls
         hosts:
           - stock-app-staging.yourcompany.com
-  
+
   resources:
     requests:
       memory: "128Mi"
@@ -56,7 +56,7 @@ microservices:
       limits:
         memory: "256Mi"
         cpu: "200m"
-  
+
   inventory:
     versions:
       v1:
@@ -72,7 +72,7 @@ microservices:
       limits:
         memory: "256Mi"
         cpu: "200m"
-  
+
   users:
     versions:
       v1:
@@ -88,7 +88,7 @@ microservices:
       limits:
         memory: "256Mi"
         cpu: "200m"
-  
+
   reviews:
     versions:
       v1:
@@ -107,7 +107,7 @@ microservices:
       limits:
         memory: "256Mi"
         cpu: "200m"
-  
+
   ratings:
     versions:
       v1:
@@ -129,17 +129,41 @@ istio:
   gateway:
     hosts:
       - "stock-app-staging.yourcompany.com"
+
   virtualService:
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
     faultInjection:
       enabled: true
       delay:
-        percentage: 5.0
+        percentage: 5
         fixedDelay: 1s
       abort:
-        percentage: 2.0
+        percentage: 2
         httpStatus: 503
+
+  destinationRule:
+    enabled: true
+    trafficPolicy:
+      connectionPool:
+        tcp:
+          maxConnections: 20
+        http:
+          http1MaxPendingRequests: 20
+          maxRequestsPerConnection: 5
+      outlierDetection:
+        consecutive5xxErrors: 3
+        consecutiveGatewayErrors: 3
+        interval: 30s
+        baseEjectionTime: 30s
+        maxEjectionPercent: 50
+
   peerAuthentication:
+    enabled: true
     mtlsMode: STRICT
+
   authorizationPolicy:
     enabled: true
 
@@ -148,9 +172,12 @@ monitoring:
   serviceMonitor:
     enabled: true
     interval: 15s
+    path: /metrics
 
 autoscaling:
   enabled: true
   minReplicas: 2
   maxReplicas: 5
-  targetCPUUtilizationPercentage: 70
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+

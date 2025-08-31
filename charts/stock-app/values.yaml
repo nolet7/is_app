@@ -4,7 +4,7 @@ global:
   imageTag: latest
   imagePullPolicy: IfNotPresent
   env: dev
-  
+
   # Common labels applied to all resources
   labels:
     app.kubernetes.io/name: stock-app
@@ -23,13 +23,13 @@ frontend:
     repository: stock-frontend
     tag: ""  # Uses global.imageTag if empty
     pullPolicy: ""  # Uses global.imagePullPolicy if empty
-  
+
   service:
     type: ClusterIP
     port: 80
     targetPort: 80
     annotations: {}
-  
+
   ingress:
     enabled: false
     className: ""
@@ -40,7 +40,7 @@ frontend:
           - path: /
             pathType: Prefix
     tls: []
-  
+
   resources:
     requests:
       memory: "64Mi"
@@ -48,15 +48,15 @@ frontend:
     limits:
       memory: "128Mi"
       cpu: "100m"
-  
+
   nodeSelector: {}
   tolerations: []
   affinity: {}
-  
+
   podAnnotations: {}
   podSecurityContext: {}
   securityContext: {}
-  
+
   livenessProbe:
     httpGet:
       path: /health
@@ -65,7 +65,7 @@ frontend:
     periodSeconds: 10
     timeoutSeconds: 5
     failureThreshold: 3
-  
+
   readinessProbe:
     httpGet:
       path: /health
@@ -84,13 +84,13 @@ apiGateway:
     repository: stock-api-gateway
     tag: ""
     pullPolicy: ""
-  
+
   service:
     type: ClusterIP
     port: 3001
     targetPort: 3001
     annotations: {}
-  
+
   resources:
     requests:
       memory: "128Mi"
@@ -98,15 +98,15 @@ apiGateway:
     limits:
       memory: "256Mi"
       cpu: "200m"
-  
+
   nodeSelector: {}
   tolerations: []
   affinity: {}
-  
+
   podAnnotations: {}
   podSecurityContext: {}
   securityContext: {}
-  
+
   livenessProbe:
     httpGet:
       path: /health
@@ -115,7 +115,7 @@ apiGateway:
     periodSeconds: 10
     timeoutSeconds: 5
     failureThreshold: 3
-  
+
   readinessProbe:
     httpGet:
       path: /health
@@ -127,7 +127,6 @@ apiGateway:
 
 # Microservices configuration
 microservices:
-  # Orders service
   orders:
     enabled: true
     name: orders
@@ -135,7 +134,6 @@ microservices:
       repository: stock-orders
       tag: ""
       pullPolicy: ""
-    
     versions:
       v1:
         enabled: true
@@ -145,12 +143,10 @@ microservices:
         enabled: true
         replicaCount: 1
         weight: 30
-    
     service:
       type: ClusterIP
       port: 5001
       targetPort: 5001
-    
     resources:
       requests:
         memory: "64Mi"
@@ -158,14 +154,12 @@ microservices:
       limits:
         memory: "128Mi"
         cpu: "100m"
-    
     livenessProbe:
       httpGet:
         path: /health
         port: 5001
       initialDelaySeconds: 30
       periodSeconds: 10
-    
     readinessProbe:
       httpGet:
         path: /health
@@ -173,7 +167,6 @@ microservices:
       initialDelaySeconds: 5
       periodSeconds: 5
 
-  # Inventory service
   inventory:
     enabled: true
     name: inventory
@@ -181,7 +174,6 @@ microservices:
       repository: stock-inventory
       tag: ""
       pullPolicy: ""
-    
     versions:
       v1:
         enabled: true
@@ -191,12 +183,10 @@ microservices:
         enabled: true
         replicaCount: 1
         weight: 20
-    
     service:
       type: ClusterIP
       port: 5002
       targetPort: 5002
-    
     resources:
       requests:
         memory: "64Mi"
@@ -204,14 +194,12 @@ microservices:
       limits:
         memory: "128Mi"
         cpu: "100m"
-    
     livenessProbe:
       httpGet:
         path: /health
         port: 5002
       initialDelaySeconds: 30
       periodSeconds: 10
-    
     readinessProbe:
       httpGet:
         path: /health
@@ -219,7 +207,6 @@ microservices:
       initialDelaySeconds: 5
       periodSeconds: 5
 
-  # Users service
   users:
     enabled: true
     name: users
@@ -227,7 +214,6 @@ microservices:
       repository: stock-users
       tag: ""
       pullPolicy: ""
-    
     versions:
       v1:
         enabled: true
@@ -237,12 +223,10 @@ microservices:
         enabled: true
         replicaCount: 1
         weight: 40
-    
     service:
       type: ClusterIP
       port: 5003
       targetPort: 5003
-    
     resources:
       requests:
         memory: "64Mi"
@@ -250,14 +234,12 @@ microservices:
       limits:
         memory: "128Mi"
         cpu: "100m"
-    
     livenessProbe:
       httpGet:
         path: /health
         port: 5003
       initialDelaySeconds: 30
       periodSeconds: 10
-    
     readinessProbe:
       httpGet:
         path: /health
@@ -265,7 +247,6 @@ microservices:
       initialDelaySeconds: 5
       periodSeconds: 5
 
-  # Reviews service
   reviews:
     enabled: true
     name: reviews
@@ -273,7 +254,6 @@ microservices:
       repository: stock-reviews
       tag: ""
       pullPolicy: ""
-    
     versions:
       v1:
         enabled: true
@@ -287,12 +267,10 @@ microservices:
         enabled: true
         replicaCount: 1
         weight: 10
-    
     service:
       type: ClusterIP
       port: 5004
       targetPort: 5004
-    
     resources:
       requests:
         memory: "64Mi"
@@ -300,14 +278,12 @@ microservices:
       limits:
         memory: "128Mi"
         cpu: "100m"
-    
     livenessProbe:
       httpGet:
         path: /health
         port: 5004
       initialDelaySeconds: 30
       periodSeconds: 10
-    
     readinessProbe:
       httpGet:
         path: /health
@@ -315,7 +291,6 @@ microservices:
       initialDelaySeconds: 5
       periodSeconds: 5
 
-  # Ratings service
   ratings:
     enabled: true
     name: ratings
@@ -323,7 +298,6 @@ microservices:
       repository: stock-ratings
       tag: ""
       pullPolicy: ""
-    
     versions:
       v1:
         enabled: true
@@ -333,12 +307,10 @@ microservices:
         enabled: true
         replicaCount: 1
         weight: 25
-    
     service:
       type: ClusterIP
       port: 5005
       targetPort: 5005
-    
     resources:
       requests:
         memory: "64Mi"
@@ -346,14 +318,12 @@ microservices:
       limits:
         memory: "128Mi"
         cpu: "100m"
-    
     livenessProbe:
       httpGet:
         path: /health
         port: 5005
       initialDelaySeconds: 30
       periodSeconds: 10
-    
     readinessProbe:
       httpGet:
         path: /health
@@ -364,7 +334,7 @@ microservices:
 # Istio configuration
 istio:
   enabled: true
-  
+
   gateway:
     enabled: true
     name: stock-app-gateway
@@ -373,23 +343,23 @@ istio:
     tls:
       enabled: false
       secretName: stock-app-tls
-  
+
   virtualService:
     enabled: true
     timeout: 30s
     retries:
       attempts: 3
       perTryTimeout: 10s
-    
+
     faultInjection:
       enabled: false
       delay:
-        percentage: 10.0
+        percentage: 10
         fixedDelay: 2s
       abort:
-        percentage: 5.0
+        percentage: 5
         httpStatus: 503
-  
+
   destinationRule:
     enabled: true
     trafficPolicy:
@@ -399,23 +369,17 @@ istio:
         http:
           http1MaxPendingRequests: 10
           maxRequestsPerConnection: 2
-      circuitBreaker:
-        consecutiveGatewayErrors: 3
-        consecutive5xxErrors: 3
-        interval: 30s
-        baseEjectionTime: 30s
-        maxEjectionPercent: 50
       outlierDetection:
         consecutive5xxErrors: 3
         consecutiveGatewayErrors: 3
         interval: 30s
         baseEjectionTime: 30s
         maxEjectionPercent: 50
-  
+
   peerAuthentication:
     enabled: true
     mtlsMode: STRICT
-  
+
   authorizationPolicy:
     enabled: true
     allowedUsers:
@@ -445,11 +409,11 @@ monitoring:
     enabled: false
     interval: 30s
     path: /metrics
-  
+
   grafana:
     enabled: false
     dashboards: {}
-  
+
   prometheus:
     enabled: false
     rules: {}
@@ -460,4 +424,4 @@ autoscaling:
   minReplicas: 1
   maxReplicas: 10
   targetCPUUtilizationPercentage: 80
-  targetMemoryUtilizationPercentage: 80
+

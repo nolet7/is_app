@@ -1,7 +1,116 @@
 # Stock Management & Reviews App
 
-A production-ready microservices application for managing product inventory, orders, user profiles, reviews, and ratings. Built with modern technologies and designed for deployment with Docker Compose or Kubernetes.
+A production-ready microservices application for managing product inventory, orders, user profiles, reviews, and ratings. Built with modern technologies and designed for deployment with Docker Compose, Kubernetes, Helm, and Istio service mesh.
 
+## 🚀 Quick Start
+
+### Local Development
+```bash
+# Start all services with Docker Compose
+./scripts/local-dev.sh
+
+# Or manually:
+docker-compose up --build
+```
+
+### CI/CD Pipeline
+```bash
+# Build and push all images
+./scripts/build-and-push.sh v1.0.0
+
+# Deploy to staging
+./scripts/deploy-helm.sh stage staging v1.0.0
+
+# Deploy to production
+./scripts/deploy-helm.sh prod production v1.0.0
+```
+
+## 🔄 CI/CD Pipeline
+
+### GitHub Actions Workflow
+
+The project includes a complete CI/CD pipeline (`.github/workflows/cicd.yaml`) that:
+
+1. **Builds Docker images** for all services on every push/PR
+2. **Pushes to Docker Hub** with tags: `noletengine/<service>:<git-sha>` and `latest`
+3. **Updates Helm values** with new image tags automatically
+4. **Deploys to staging** on main branch pushes
+5. **Deploys to production** after staging validation
+
+### Required Secrets
+
+Configure these secrets in your GitHub repository:
+
+```bash
+# Docker Hub credentials
+DOCKERHUB_USERNAME=noletengine
+DOCKERHUB_TOKEN=<your-docker-hub-token>
+
+# Kubernetes cluster access
+KUBE_CONFIG_STAGING=<base64-encoded-kubeconfig-for-staging>
+KUBE_CONFIG_PROD=<base64-encoded-kubeconfig-for-production>
+```
+
+### Manual Image Build & Push
+
+```bash
+# Build and push all images with specific tag
+./scripts/build-and-push.sh v1.2.3
+
+# Build and push with latest tag
+./scripts/build-and-push.sh latest
+```
+
+## 📦 Helm Deployment
+
+### Environment-Specific Values
+
+- **`values.yaml`**: Default development configuration
+- **`values-stage.yaml`**: Staging environment with increased replicas and monitoring
+- **`values-prod.yaml`**: Production environment with high availability and resource limits
+
+### Deployment Commands
+
+```bash
+# Development (local)
+helm install stock-app ./charts/stock-app -n dev --create-namespace
+
+# Staging
+helm upgrade --install stock-app ./charts/stock-app \
+  -f ./charts/stock-app/values-stage.yaml \
+  --set global.imageTag=staging-abc123 \
+  -n staging --create-namespace
+
+# Production
+helm upgrade --install stock-app ./charts/stock-app \
+  -f ./charts/stock-app/values-prod.yaml \
+  --set global.imageTag=stable-def456 \
+  -n production --create-namespace
+```
+
+### Helm Configuration
+
+Key configuration options in `values.yaml`:
+
+```yaml
+global:
+  imageRegistry: docker.io/noletengine
+  imageTag: latest
+  env: dev
+
+# Service-specific overrides
+frontend:
+  replicaCount: 2
+  resources: { ... }
+
+# Istio configuration
+istio:
+  enabled: true
+  gateway:
+    hosts: ["*"]
+  virtualService:
+    faultInjection: { ... }
+```
 ## Architecture Overview
 
 This application follows a microservices architecture pattern with clear separation of concerns and service boundaries. The system is designed for scalability, maintainability, and cloud-native deployment.
@@ -269,72 +378,128 @@ This application demonstrates a complete microservices architecture with:
 
 ## Quick Start
 
-### Option 1: Docker Compose (Recommended for Development)
+### Docker Compose (Local Development)
 
-1. **Clone and navigate to the project**:
+1. **Start all services**:
    ```bash
-   git clone <repository-url>
-   cd stock-management-app
+   ./scripts/local-dev.sh
+   # Or: docker-compose up --build
    ```
 
-2. **Build and start all services**:
-   ```bash
-   docker-compose up --build
-   ```
-
-3. **Access the application**:
+2. **Access the application**:
    - **Frontend**: http://localhost:3000
    - **API Gateway**: http://localhost:3001
    - **Health Check**: http://localhost:3001/health
 
-4. **Test the application**:
+3. **Test the application**:
    - Browse products in the web interface
    - Place orders by clicking "Order" buttons
    - Submit reviews using the "+" button on product cards
    - View real-time stock updates and ratings
 
-### Option 2: Local Development
+### Kubernetes Deployment
 
-1. **Start the API Gateway**:
+1. **Build and push images**:
    ```bash
-   cd api-gateway
-   npm install
-   npm start
+   ./scripts/build-and-push.sh v1.0.0
    ```
 
-2. **Start each microservice** (in separate terminals):
+2. **Deploy to staging**:
    ```bash
-   # Inventory Service
-   cd services/inventory
-   pip install -r requirements.txt
-   python app.py
-
-   # Orders Service  
-   cd services/orders
-   pip install -r requirements.txt
-   python app.py
-
-   # Users Service
-   cd services/users
-   pip install -r requirements.txt
-   python app.py
-
-   # Reviews Service
-   cd services/reviews
-   pip install -r requirements.txt
-   python app.py
-
-   # Ratings Service
-   cd services/ratings
-   pip install -r requirements.txt
-   python app.py
+   ./scripts/deploy-helm.sh stage staging v1.0.0
    ```
 
-3. **Start the frontend**:
+3. **Deploy to production**:
    ```bash
-   npm install
-   npm run dev
+   ./scripts/deploy-helm.sh prod production v1.0.0
    ```
+
+## 🔄 CI/CD Pipeline
+
+### GitHub Actions Workflow
+
+The project includes a complete CI/CD pipeline (`.github/workflows/cicd.yaml`) that:
+
+1. **Builds Docker images** for all services on every push/PR
+2. **Pushes to Docker Hub** with tags: `noletengine/<service>:<git-sha>` and `latest`
+3. **Updates Helm values** with new image tags automatically
+4. **Deploys to staging** on main branch pushes
+5. **Deploys to production** after staging validation
+
+### Required Secrets
+
+Configure these secrets in your GitHub repository:
+
+```bash
+# Docker Hub credentials
+DOCKERHUB_USERNAME=noletengine
+DOCKERHUB_TOKEN=<your-docker-hub-token>
+
+# Kubernetes cluster access
+KUBE_CONFIG_STAGING=<base64-encoded-kubeconfig-for-staging>
+KUBE_CONFIG_PROD=<base64-encoded-kubeconfig-for-production>
+```
+
+### Manual Image Build & Push
+
+```bash
+# Build and push all images with specific tag
+./scripts/build-and-push.sh v1.2.3
+
+# Build and push with latest tag
+./scripts/build-and-push.sh latest
+```
+
+## 📦 Helm Deployment
+
+### Environment-Specific Values
+
+- **`values.yaml`**: Default development configuration
+- **`values-stage.yaml`**: Staging environment with increased replicas and monitoring
+- **`values-prod.yaml`**: Production environment with high availability and resource limits
+
+### Deployment Commands
+
+```bash
+# Development (local)
+helm install stock-app ./charts/stock-app -n dev --create-namespace
+
+# Staging
+helm upgrade --install stock-app ./charts/stock-app \
+  -f ./charts/stock-app/values-stage.yaml \
+  --set global.imageTag=staging-abc123 \
+  -n staging --create-namespace
+
+# Production
+helm upgrade --install stock-app ./charts/stock-app \
+  -f ./charts/stock-app/values-prod.yaml \
+  --set global.imageTag=stable-def456 \
+  -n production --create-namespace
+```
+
+### Helm Configuration
+
+Key configuration options in `values.yaml`:
+
+```yaml
+global:
+  imageRegistry: docker.io/noletengine
+  imageTag: latest
+  env: dev
+
+# Service-specific overrides
+frontend:
+  replicaCount: 2
+  resources: { ... }
+
+# Istio configuration
+istio:
+  enabled: true
+  gateway:
+    hosts: ["*"]
+  virtualService:
+    faultInjection: { ... }
+```
 
 ## API Testing
 

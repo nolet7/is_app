@@ -4,8 +4,8 @@ services:
   # Frontend
   frontend:
     build: 
-      context: .
-      dockerfile: Dockerfile.frontend
+      context: ./
+      dockerfile: ./Dockerfile.frontend
     ports:
       - "3000:80"
     depends_on:
@@ -17,7 +17,9 @@ services:
 
   # API Gateway
   api-gateway:
-    build: ./api-gateway
+    build: 
+      context: ./api-gateway
+      dockerfile: ./Dockerfile
     ports:
       - "3001:3001"
     depends_on:

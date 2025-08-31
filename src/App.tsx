@@ -75,218 +75,115 @@ function App() {
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
   const [notifications, setNotifications] = useState<string[]>([]);
 
-  // Simulate API calls with realistic data
-  const fetchProducts = async (): Promise<ServiceResponse<Product[]>> => {
-    await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300));
-    
-    const mockProducts: Product[] = [
-      {
-        id: 'LAP-001',
-        name: 'Gaming Laptop Pro',
-        stock: 15,
-        price: 1299.99,
-        category: 'Electronics',
-        description: 'High-performance gaming laptop with RTX 4070 and 32GB RAM'
-      },
-      {
-        id: 'PHN-002',
-        name: 'Smartphone X1',
-        stock: 42,
-        price: 899.00,
-        category: 'Electronics',
-        description: 'Latest flagship smartphone with advanced camera system'
-      },
-      {
-        id: 'HDH-003',
-        name: 'Wireless Headphones',
-        stock: 28,
-        price: 199.99,
-        category: 'Audio',
-        description: 'Premium noise-canceling wireless headphones'
-      },
-      {
-        id: 'CHR-004',
-        name: 'USB-C Fast Charger',
-        stock: 67,
-        price: 29.99,
-        category: 'Accessories',
-        description: '65W fast charging adapter with multiple ports'
-      },
-      {
-        id: 'TAB-005',
-        name: 'Tablet Pro',
-        stock: 23,
-        price: 649.99,
-        category: 'Electronics',
-        description: '12.9-inch tablet with Apple M2 chip and 5G connectivity'
-      },
-      {
-        id: 'SPK-006',
-        name: 'Smart Speaker',
-        stock: 35,
-        price: 149.99,
-        category: 'Audio',
-        description: 'Voice-controlled smart speaker with premium sound'
-      }
-    ];
-
-    return {
-      data: mockProducts,
-      service: 'inventory',
-      version: Math.random() > 0.3 ? 'v1' : 'v2',
-      timestamp: Date.now(),
-      responseTime: Math.floor(Math.random() * 200) + 50
-    };
+  // Fetch data from API Gateway
+  const fetchProducts = async (): Promise<Product[]> => {
+    const response = await fetch(`${API_BASE_URL}/inventory`);
+    if (!response.ok) throw new Error('Failed to fetch products');
+    const data = await response.json();
+    return data.products || [];
   };
 
-  const fetchUser = async (): Promise<ServiceResponse<User>> => {
-    await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
-    
-    const mockUser: User = {
-      id: 'usr-001',
-      name: 'Sarah Johnson',
-      email: 'sarah.johnson@example.com',
-      role: 'Premium Customer',
-      joinedAt: '2023-06-15'
-    };
-
-    return {
-      data: mockUser,
-      service: 'users',
-      version: Math.random() > 0.4 ? 'v1' : 'v2',
-      timestamp: Date.now(),
-      responseTime: Math.floor(Math.random() * 150) + 30
-    };
+  const fetchUser = async (): Promise<User> => {
+    const response = await fetch(`${API_BASE_URL}/users/current`);
+    if (!response.ok) throw new Error('Failed to fetch user');
+    const data = await response.json();
+    return data.user;
   };
 
-  const fetchRatings = async (productId: string): Promise<ServiceResponse<Rating>> => {
-    await new Promise(resolve => setTimeout(resolve, 80 + Math.random() * 120));
-    
-    const mockRating: Rating = {
-      productId,
-      averageRating: 3.5 + Math.random() * 1.5,
-      totalReviews: Math.floor(Math.random() * 200) + 10,
-      distribution: {
-        5: Math.floor(Math.random() * 50) + 20,
-        4: Math.floor(Math.random() * 30) + 15,
-        3: Math.floor(Math.random() * 20) + 5,
-        2: Math.floor(Math.random() * 10) + 2,
-        1: Math.floor(Math.random() * 5) + 1
-      }
-    };
-
-    return {
-      data: mockRating,
-      service: 'ratings',
-      version: Math.random() > 0.25 ? 'v1' : 'v2',
-      timestamp: Date.now(),
-      responseTime: Math.floor(Math.random() * 100) + 40
-    };
+  const fetchRatings = async (productId: string): Promise<Rating> => {
+    const response = await fetch(`${API_BASE_URL}/ratings/${productId}`);
+    if (!response.ok) throw new Error('Failed to fetch ratings');
+    const data = await response.json();
+    return data.rating;
   };
 
-  const fetchReviews = async (productId: string): Promise<ServiceResponse<Review[]>> => {
-    await new Promise(resolve => setTimeout(resolve, 150 + Math.random() * 250));
-    
-    const mockReviews: Review[] = [
-      {
-        id: 'rev-001',
-        productId,
-        userId: 'usr-002',
-        rating: 5,
-        comment: 'Excellent product! Exceeded my expectations.',
-        createdAt: '2025-01-07T10:30:00Z',
-        verified: true
-      },
-      {
-        id: 'rev-002',
-        productId,
-        userId: 'usr-003',
-        rating: 4,
-        comment: 'Good quality, fast shipping. Would recommend.',
-        createdAt: '2025-01-06T15:45:00Z',
-        verified: true
-      }
-    ];
-
-    return {
-      data: mockReviews,
-      service: 'reviews',
-      version: Math.random() > 0.2 ? 'v1' : Math.random() > 0.5 ? 'v2' : 'v3',
-      timestamp: Date.now(),
-      responseTime: Math.floor(Math.random() * 180) + 60
-    };
+  const fetchReviews = async (productId: string): Promise<Review[]> => {
+    const response = await fetch(`${API_BASE_URL}/reviews/${productId}`);
+    if (!response.ok) throw new Error('Failed to fetch reviews');
+    const data = await response.json();
+    return data.reviews || [];
   };
 
-  const createOrder = async (productId: string, quantity: number): Promise<ServiceResponse<Order>> => {
-    await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 400));
-    
+  const createOrder = async (productId: string, quantity: number): Promise<Order> => {
     const product = products.find(p => p.id === productId);
-    const mockOrder: Order = {
-      id: `ORD-${Date.now()}`,
-      userId: user?.id || 'usr-001',
-      productId,
-      quantity,
-      total: (product?.price || 0) * quantity,
-      status: 'confirmed',
-      createdAt: new Date().toISOString()
-    };
-
-    return {
-      data: mockOrder,
-      service: 'orders',
-      version: Math.random() > 0.3 ? 'v1' : 'v2',
-      timestamp: Date.now(),
-      responseTime: Math.floor(Math.random() * 300) + 100
-    };
+    const response = await fetch(`${API_BASE_URL}/orders`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        productId,
+        quantity,
+        userId: 'usr-001',
+        total: (product?.price || 0) * quantity
+      })
+    });
+    
+    if (!response.ok) throw new Error('Failed to create order');
+    const data = await response.json();
+    return data.order;
   };
 
-  const submitReview = async (productId: string, rating: number, comment: string): Promise<ServiceResponse<Review>> => {
-    await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300));
+  const submitReview = async (productId: string, rating: number, comment: string): Promise<Review> => {
+    const response = await fetch(`${API_BASE_URL}/reviews`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        productId,
+        rating,
+        comment,
+        userId: user?.id || 'usr-001',
+        userName: user?.name || 'Anonymous'
+      })
+    });
     
-    const mockReview: Review = {
-      id: `rev-${Date.now()}`,
-      productId,
-      userId: user?.id || 'usr-001',
-      rating,
-      comment,
-      createdAt: new Date().toISOString(),
-      verified: true
-    };
-
-    return {
-      data: mockReview,
-      service: 'reviews',
-      version: Math.random() > 0.2 ? 'v1' : Math.random() > 0.5 ? 'v2' : 'v3',
-      timestamp: Date.now(),
-      responseTime: Math.floor(Math.random() * 250) + 80
-    };
+    if (!response.ok) throw new Error('Failed to submit review');
+    const data = await response.json();
+    return data.review;
   };
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [productsResponse, userResponse] = await Promise.all([
+      // Fetch products and user data
+      const [productsData, userData] = await Promise.all([
         fetchProducts(),
         fetchUser()
       ]);
 
-      setProducts(productsResponse.data);
-      setUser(userResponse.data);
+      setProducts(productsData);
+      setUser(userData);
 
-      // Load ratings for all products
-      const ratingsPromises = productsResponse.data.map(product => 
-        fetchRatings(product.id).then(response => ({ [product.id]: response.data }))
-      );
+      // Load ratings and reviews for all products
+      const ratingsPromises = productsData.map(async (product) => {
+        try {
+          const rating = await fetchRatings(product.id);
+          return { [product.id]: rating };
+        } catch (error) {
+          console.error(`Failed to fetch ratings for ${product.id}:`, error);
+          return { [product.id]: { productId: product.id, averageRating: 0, totalReviews: 0, distribution: {} } };
+        }
+      });
+
+      const reviewsPromises = productsData.map(async (product) => {
+        try {
+          const productReviews = await fetchReviews(product.id);
+          return { [product.id]: productReviews };
+        } catch (error) {
+          console.error(`Failed to fetch reviews for ${product.id}:`, error);
+          return { [product.id]: [] };
+        }
+      });
+
       const ratingsResults = await Promise.all(ratingsPromises);
-      const ratingsMap = ratingsResults.reduce((acc, rating) => ({ ...acc, ...rating }), {});
-      setRatings(ratingsMap);
-
-      // Load reviews for all products
-      const reviewsPromises = productsResponse.data.map(product => 
-        fetchReviews(product.id).then(response => ({ [product.id]: response.data }))
-      );
       const reviewsResults = await Promise.all(reviewsPromises);
+
+      const ratingsMap = ratingsResults.reduce((acc, rating) => ({ ...acc, ...rating }), {});
       const reviewsMap = reviewsResults.reduce((acc, review) => ({ ...acc, ...review }), {});
+
+      setRatings(ratingsMap);
       setReviews(reviewsMap);
 
     } catch (error) {
@@ -308,8 +205,8 @@ function App() {
     if (!selectedProduct) return;
     
     try {
-      const response = await createOrder(selectedProduct.id, orderQuantity);
-      addNotification(`Order ${response.data.id} placed successfully! Total: $${response.data.total.toFixed(2)}`);
+      const order = await createOrder(selectedProduct.id, orderQuantity);
+      addNotification(`Order ${order.id} placed successfully! Total: $${order.total.toFixed(2)}`);
       setShowOrderModal(false);
       setOrderQuantity(1);
       
@@ -320,6 +217,7 @@ function App() {
           : p
       ));
     } catch (error) {
+      console.error('Order error:', error);
       addNotification('Failed to place order. Please try again.');
     }
   };
@@ -328,7 +226,7 @@ function App() {
     if (!selectedProduct) return;
     
     try {
-      const response = await submitReview(selectedProduct.id, reviewForm.rating, reviewForm.comment);
+      const review = await submitReview(selectedProduct.id, reviewForm.rating, reviewForm.comment);
       addNotification('Review submitted successfully!');
       setShowReviewModal(false);
       setReviewForm({ rating: 5, comment: '' });
@@ -336,9 +234,19 @@ function App() {
       // Update reviews locally
       setReviews(prev => ({
         ...prev,
-        [selectedProduct.id]: [...(prev[selectedProduct.id] || []), response.data]
+        [selectedProduct.id]: [...(prev[selectedProduct.id] || []), review]
+      }));
+
+      // Update ratings count
+      setRatings(prev => ({
+        ...prev,
+        [selectedProduct.id]: {
+          ...prev[selectedProduct.id],
+          totalReviews: (prev[selectedProduct.id]?.totalReviews || 0) + 1
+        }
       }));
     } catch (error) {
+      console.error('Review error:', error);
       addNotification('Failed to submit review. Please try again.');
     }
   };
@@ -376,7 +284,7 @@ function App() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading application...</p>
+          <p className="text-gray-600">Loading Stock Management & Reviews App...</p>
         </div>
       </div>
     );

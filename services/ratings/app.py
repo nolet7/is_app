@@ -10,79 +10,106 @@ CORS(app)
 VERSION = os.environ.get('SERVICE_VERSION', 'v1')
 SERVICE_NAME = 'ratings'
 
-# Simulate rating analytics data
-def get_ratings_data():
+def get_product_rating(product_id):
+    # Simulate different ratings for different products
     base_ratings = {
-        "overall_rating": 4.3,
-        "total_ratings": 1247,
-        "rating_distribution": {
-            "5_star": 652,
-            "4_star": 398,
-            "3_star": 124,
-            "2_star": 45,
-            "1_star": 28
-        },
-        "trending": "up",
-        "last_30_days": 89
+        "LAP-001": {"avg": 4.7, "total": 156},
+        "PHN-002": {"avg": 4.3, "total": 243},
+        "HDH-003": {"avg": 4.8, "total": 189},
+        "CHR-004": {"avg": 4.1, "total": 67},
+        "TAB-005": {"avg": 4.5, "total": 134},
+        "SPK-006": {"avg": 4.4, "total": 98}
+    }
+    
+    base = base_ratings.get(product_id, {"avg": 4.0, "total": 50})
+    
+    # Add some randomness
+    avg_rating = base["avg"] + random.uniform(-0.2, 0.2)
+    total_reviews = base["total"] + random.randint(-10, 20)
+    
+    # Generate distribution
+    distribution = {}
+    remaining = total_reviews
+    for star in [5, 4, 3, 2, 1]:
+        if star == 1:
+            distribution[star] = remaining
+        else:
+            count = random.randint(0, remaining // 2)
+            distribution[star] = count
+            remaining -= count
+    
+    rating_data = {
+        "productId": product_id,
+        "averageRating": round(avg_rating, 1),
+        "totalReviews": total_reviews,
+        "distribution": distribution
     }
     
     if VERSION == 'v2':
         # v2 includes enhanced analytics
-        base_ratings.update({
+        rating_data.update({
             "sentiment_analysis": {
-                "positive": 78.5,
-                "neutral": 15.2,
-                "negative": 6.3
+                "positive": 75.0 + random.uniform(-10, 15),
+                "neutral": 18.0 + random.uniform(-5, 10),
+                "negative": 7.0 + random.uniform(-3, 8)
             },
+            "trending": random.choice(["up", "down", "stable"]),
+            "verified_purchase_percentage": 80.0 + random.uniform(-10, 15),
             "top_keywords": ["quality", "fast", "reliable", "value", "recommend"],
-            "geographic_breakdown": {
-                "north_america": 45.2,
-                "europe": 32.1,
-                "asia": 18.7,
-                "other": 4.0
-            },
-            "verified_purchase_percentage": 87.3
+            "monthly_trend": [4.1, 4.2, 4.3, 4.4, avg_rating]
         })
     
-    return base_ratings
+    return rating_data
 
 @app.route('/health')
 def health():
-    return jsonify({"status": "healthy", "service": SERVICE_NAME, "version": VERSION})
+    return jsonify({
+        "status": "healthy", 
+        "service": SERVICE_NAME, 
+        "version": VERSION,
+        "timestamp": time.time()
+    })
 
-@app.route('/ratings')
-def get_ratings():
+@app.route('/ratings/<product_id>')
+def get_product_ratings(product_id):
     # Simulate processing time
-    time.sleep(random.uniform(0.1, 0.5))
+    time.sleep(random.uniform(0.1, 0.4))
     
-    ratings = get_ratings_data()
+    rating_data = get_product_rating(product_id)
     
     response_data = {
         "service": SERVICE_NAME,
         "version": VERSION,
-        "ratings": ratings,
+        "rating": rating_data,
         "timestamp": time.time()
     }
     
     return jsonify(response_data)
 
-@app.route('/ratings/<product_id>')
-def get_product_ratings(product_id):
+@app.route('/ratings')
+def get_all_ratings():
     # Simulate processing time
-    time.sleep(random.uniform(0.1, 0.3))
+    time.sleep(random.uniform(0.1, 0.5))
     
-    ratings = get_ratings_data()
+    product_ids = ["LAP-001", "PHN-002", "HDH-003", "CHR-004", "TAB-005", "SPK-006"]
+    all_ratings = {}
     
-    # Simulate product-specific variations
-    product_rating = dict(ratings)
-    product_rating['overall_rating'] = round(random.uniform(3.5, 5.0), 1)
-    product_rating['total_ratings'] = random.randint(50, 500)
+    for product_id in product_ids:
+        all_ratings[product_id] = get_product_rating(product_id)
+    
+    # Calculate overall statistics
+    total_reviews = sum(rating["totalReviews"] for rating in all_ratings.values())
+    avg_rating = sum(rating["averageRating"] * rating["totalReviews"] for rating in all_ratings.values()) / total_reviews if total_reviews > 0 else 0
     
     response_data = {
         "service": SERVICE_NAME,
         "version": VERSION,
-        "product_id": product_id,
-        "ratings": product_rating,
+        "ratings": all_ratings,
+        "overall_stats": {
+            "average_rating": round(avg_rating, 2),
+            "total_reviews": total_reviews,
+            "total_products": len(all_ratings)
+        },
         "timestamp": time.time()
     }
     

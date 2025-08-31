@@ -1,449 +1,358 @@
-# Istio Microservices Demo Application
+# Stock Management & Reviews App
 
-A comprehensive microservices demonstration application designed to showcase Istio's traffic management and security features in a production-ready environment.
+A production-ready microservices application for managing product inventory, orders, user profiles, reviews, and ratings. Built with modern technologies and designed for deployment with Docker Compose or Kubernetes.
 
 ## Architecture Overview
 
-This application consists of:
+This application demonstrates a complete microservices architecture with:
 
-- **Frontend**: React-based dashboard served by NGINX
-- **API Gateway**: Node.js/Express gateway for service orchestration
-- **Backend Services**: Three microservices (orders, inventory, users) with v1/v2 versions
-- **Istio Service Mesh**: Complete traffic management and security configuration
+- **Frontend**: React + Tailwind CSS served by NGINX
+- **API Gateway**: Node.js/Express gateway for service orchestration  
+- **Microservices**: Five independent services with v1/v2 versions
+- **Service Mesh Ready**: Designed for Istio traffic management and security
 
-## Features
+## Services
+
+### Frontend
+- **Technology**: React 18 + TypeScript + Tailwind CSS
+- **Features**: Product catalog, order placement, review submission, user dashboard
+- **Deployment**: NGINX container serving static assets
+
+### API Gateway
+- **Technology**: Node.js + Express
+- **Purpose**: Central routing and request orchestration
+- **Features**: CORS handling, request logging, error handling
+- **Port**: 3001
 
 ### Microservices
-- **Orders Service**: Manages order data and processing (v1 & v2)
-- **Inventory Service**: Tracks product stock and availability (v1 & v2)
-- **Users Service**: Handles user profiles and data (v1 & v2)
-- **Reviews Service**: Manages product reviews and feedback (v1, v2 & v3)
-- **Ratings Service**: Aggregates ratings and analytics (v1 & v2)
-- **API Gateway**: Routes frontend calls to backend services
 
-### Istio Capabilities Demonstrated
-- **Traffic Management**:
-  - A/B testing with multiple versions (including v3 for reviews)
-  - Canary deployments with header-based routing
-  - Feature flag routing (`feature-flag: v3-enabled` for reviews v3)
-  - Timeout policies (3s)
-  - Retry mechanisms with per-try timeouts
-  - Fault injection (delays and aborts)
-  - Circuit breaking with outlier detection
+#### 1. Inventory Service
+- **Purpose**: Manages product catalog and stock levels
+- **Technology**: Python + Flask
+- **Port**: 5002
+- **Endpoints**:
+  - `GET /inventory` - List all products
+  - `GET /inventory/{id}` - Get specific product
+- **v1 vs v2**: v2 includes warehouse location and reserved stock info
 
-- **Security**:
-  - mTLS in STRICT mode for service-to-service communication
-  - Authorization policies requiring `x-user: allowed-user` header
-  - Peer authentication with service accounts
+#### 2. Orders Service  
+- **Purpose**: Handles order creation and management
+- **Technology**: Python + Flask
+- **Port**: 5001
+- **Endpoints**:
+  - `POST /orders` - Create new order
+  - `GET /orders` - List orders
+  - `GET /orders/{id}` - Get specific order
+- **v1 vs v2**: v2 includes priority, tracking, and shipping method
 
-### New Service Features
-- **Reviews Service**: Three versions (v1, v2, v3) demonstrating progressive feature rollouts
-  - v1: Basic reviews with rating and content
-  - v2: Enhanced with verification status, helpful votes, and sentiment analysis
-  - v3: AI-powered features with summaries and moderation
-- **Ratings Service**: Analytics and aggregated rating data with geographic breakdown
+#### 3. Users Service
+- **Purpose**: Manages user profiles and authentication data
+- **Technology**: Python + Flask  
+- **Port**: 5003
+- **Endpoints**:
+  - `GET /users/current` - Get current user profile
+  - `GET /users/{id}` - Get specific user
+- **v1 vs v2**: v2 includes preferences, loyalty points, and addresses
+
+#### 4. Reviews Service
+- **Purpose**: Handles product reviews and feedback
+- **Technology**: Python + Flask
+- **Port**: 5004  
+- **Endpoints**:
+  - `GET /reviews/{productId}` - Get product reviews
+  - `POST /reviews` - Submit new review
+  - `GET /reviews` - Get all reviews
+- **Versions**: 
+  - v1: Basic reviews with rating and comment
+  - v2: Adds helpful votes and sentiment analysis
+  - v3: Includes AI summaries and moderation features
+
+#### 5. Ratings Service
+- **Purpose**: Aggregates ratings and provides analytics
+- **Technology**: Python + Flask
+- **Port**: 5005
+- **Endpoints**:
+  - `GET /ratings/{productId}` - Get product rating data
+  - `GET /ratings` - Get all ratings overview
+- **v1 vs v2**: v2 includes sentiment analysis and trending data
 
 ## Quick Start
 
-### Option 1: Docker Compose (Local Development)
+### Option 1: Docker Compose (Recommended for Development)
 
-1. **Build and start all services**:
+1. **Clone and navigate to the project**:
+   ```bash
+   git clone <repository-url>
+   cd stock-management-app
+   ```
+
+2. **Build and start all services**:
    ```bash
    docker-compose up --build
    ```
 
-2. **Access the application**:
-   - Frontend: http://localhost:3000
-   - API Gateway: http://localhost:3001
+3. **Access the application**:
+   - **Frontend**: http://localhost:3000
+   - **API Gateway**: http://localhost:3001
+   - **Health Check**: http://localhost:3001/health
 
-3. **Test the services**:
+4. **Test the application**:
+   - Browse products in the web interface
+   - Place orders by clicking "Order" buttons
+   - Submit reviews using the "+" button on product cards
+   - View real-time stock updates and ratings
+
+### Option 2: Local Development
+
+1. **Start the API Gateway**:
    ```bash
-   # Test with proper authorization header
-   curl -H "x-user: allowed-user" http://localhost:3001/api/orders
-   
-   # Test without header (should work in Docker Compose)
-   curl http://localhost:3001/api/inventory
+   cd api-gateway
+   npm install
+   npm start
    ```
 
-4. **Test new services**:
+2. **Start each microservice** (in separate terminals):
    ```bash
-   # Test reviews service (observe v1/v2/v3 routing)
-   curl -H "x-user: allowed-user" http://localhost:3001/api/reviews
-   
-   # Test feature flag routing for reviews v3
-   curl -H "x-user: allowed-user" -H "feature-flag: v3-enabled" http://localhost:3001/api/reviews
-   
-   # Test ratings service
-   curl -H "x-user: allowed-user" http://localhost:3001/api/ratings
+   # Inventory Service
+   cd services/inventory
+   pip install -r requirements.txt
+   python app.py
+
+   # Orders Service  
+   cd services/orders
+   pip install -r requirements.txt
+   python app.py
+
+   # Users Service
+   cd services/users
+   pip install -r requirements.txt
+   python app.py
+
+   # Reviews Service
+   cd services/reviews
+   pip install -r requirements.txt
+   python app.py
+
+   # Ratings Service
+   cd services/ratings
+   pip install -r requirements.txt
+   python app.py
    ```
 
-### Option 2: Kubernetes with Istio
-
-#### Prerequisites
-- Kubernetes cluster (1.24+)
-- Istio installed and configured
-- `kubectl` configured to access your cluster
-
-#### Deployment Steps
-
-1. **Build Docker images**:
+3. **Start the frontend**:
    ```bash
-   chmod +x scripts/build-images.sh
-   ./scripts/build-images.sh
+   npm install
+   npm run dev
    ```
 
-2. **Push images to your registry** (update with your registry):
-   ```bash
-   ./scripts/build-images.sh tag your-registry.com
-   docker push your-registry.com/istio-demo-frontend:latest
-   docker push your-registry.com/istio-demo-api-gateway:latest
-   docker push your-registry.com/istio-demo-orders:latest
-   docker push your-registry.com/istio-demo-inventory:latest
-   docker push your-registry.com/istio-demo-users:latest
-  docker push your-registry.com/istio-demo-reviews:latest
-  docker push your-registry.com/istio-demo-ratings:latest
-   ```
+## API Testing
 
-3. **Update image references** in `k8s/deployments/*.yaml` to use your registry.
+### Test Individual Services
 
-4. **Deploy to Kubernetes**:
-   ```bash
-   chmod +x scripts/deploy-k8s.sh
-   ./scripts/deploy-k8s.sh default
-   ```
-
-5. **Get the ingress gateway external IP**:
-   ```bash
-   kubectl get svc istio-ingressgateway -n istio-system
-   ```
-
-6. **Access the application**:
-   ```
-   http://<EXTERNAL-IP>/
-   ```
-
-## Testing Istio Features
-
-### 1. Basic Traffic Management
-
-**Test A/B routing** (observe different service versions):
+**Inventory Service**:
 ```bash
-# Multiple requests will show traffic split between v1 and v2
+# Get all products
+curl http://localhost:3001/api/inventory
+
+# Get specific product
+curl http://localhost:3001/api/inventory/LAP-001
+```
+
+**Orders Service**:
+```bash
+# Create an order
+curl -X POST http://localhost:3001/api/orders \
+  -H "Content-Type: application/json" \
+  -d '{"productId": "LAP-001", "quantity": 1, "userId": "usr-001"}'
+
+# Get all orders
+curl http://localhost:3001/api/orders
+```
+
+**Users Service**:
+```bash
+# Get current user
+curl http://localhost:3001/api/users/current
+
+# Get specific user
+curl http://localhost:3001/api/users/usr-001
+```
+
+**Reviews Service**:
+```bash
+# Get product reviews
+curl http://localhost:3001/api/reviews/LAP-001
+
+# Submit a review
+curl -X POST http://localhost:3001/api/reviews \
+  -H "Content-Type: application/json" \
+  -d '{"productId": "LAP-001", "rating": 5, "comment": "Great product!", "userId": "usr-001"}'
+```
+
+**Ratings Service**:
+```bash
+# Get product ratings
+curl http://localhost:3001/api/ratings/LAP-001
+
+# Get all ratings overview
+curl http://localhost:3001/api/ratings
+```
+
+### Test Version Routing
+
+Each service supports multiple versions. You can test version routing by observing the `version` field in responses:
+
+```bash
+# Multiple calls will show different versions (v1/v2 distribution)
 for i in {1..10}; do
-  curl -s -H "x-user: allowed-user" http://<GATEWAY-URL>/api/inventory | jq -r '.version'
+  curl -s http://localhost:3001/api/inventory | jq -r '.version'
 done
 ```
 
-**Test canary deployment** (orders service):
-```bash
-# Normal request (goes to v1/v2 based on weight)
-curl -H "x-user: allowed-user" http://<GATEWAY-URL>/api/orders
+## Kubernetes Deployment
 
-# Canary request (always goes to v2)
-curl -H "x-user: allowed-user" -H "canary: true" http://<GATEWAY-URL>/api/orders
-```
+### Prerequisites
+- Kubernetes cluster (1.24+)
+- kubectl configured
+- Docker registry access
 
-**Test multi-version routing** (reviews service):
-```bash
-# Normal requests (distributed across v1/v2/v3: 50%/40%/10%)
-for i in {1..20}; do
-  curl -s -H "x-user: allowed-user" http://<GATEWAY-URL>/api/reviews | jq -r '.version'
-done
+### Deployment Steps
 
-# Feature flag routing (always goes to v3)
-curl -H "x-user: allowed-user" -H "feature-flag: v3-enabled" http://<GATEWAY-URL>/api/reviews
-```
-
-### 2. Fault Injection
-
-The configuration includes:
-- **Delays**: 10% of inventory requests delayed by 2s, 20% of reviews requests delayed by 1.5s
-- **Aborts**: 5% of gateway requests return 503 errors
-- **Timeouts**: Most services have 3s timeouts, ratings service has 2s timeout
-
-**Test fault injection**:
-```bash
-# Run multiple requests to observe delays and failures
-chmod +x scripts/test-istio-features.sh
-./scripts/test-istio-features.sh http://<GATEWAY-URL>
-```
-
-### 3. Security Features
-
-**Test authorization policies**:
-```bash
-# Should fail without proper header
-curl http://<GATEWAY-URL>/api/users
-
-# Should succeed with proper header
-curl -H "x-user: allowed-user" http://<GATEWAY-URL>/api/users
-```
-# Test new services
-curl -H "x-user: allowed-user" http://<GATEWAY-URL>/api/reviews
-curl -H "x-user: allowed-user" http://<GATEWAY-URL>/api/ratings
-
-**Verify mTLS**:
-```bash
-# Check if mTLS is working
-kubectl exec -n default deployment/orders-v1 -- curl -s http://inventory-service:5002/health
-```
-
-### 4. Circuit Breaking
-
-To test circuit breaking, you can simulate failures:
-
-```bash
-# Generate load to trigger circuit breaker
-for i in {1..100}; do
-  curl -H "x-user: allowed-user" http://<GATEWAY-URL>/api/orders &
-done
-```
-
-## Monitoring and Observability
-
-### View Istio Configurations
-```bash
-# Check virtual services
-kubectl get vs -n default
-
-# Check destination rules
-kubectl get dr -n default
-
-# Check authorization policies
-kubectl get authorizationpolicy -n default
-
-# Check peer authentication
-kubectl get peerauthentication -n default
-```
-
-### Access Istio Dashboard
-If you have Kiali installed:
-```bash
-kubectl port-forward svc/kiali 20001:20001 -n istio-system
-# Access: http://localhost:20001
-```
-
-### Metrics and Tracing
-If you have Grafana and Jaeger:
-```bash
-# Grafana
-kubectl port-forward svc/grafana 3000:3000 -n istio-system
-
-# Jaeger
-kubectl port-forward svc/jaeger 16686:16686 -n istio-system
-```
-
-## Advanced Istio Scenarios
-
-### Multi-Version Progressive Rollout (Reviews Service)
-
-1. **Start with v1 only**:
+1. **Build and push images**:
    ```bash
-   kubectl apply -f - <<EOF
-   apiVersion: networking.istio.io/v1beta1
-   kind: VirtualService
-   metadata:
-     name: reviews-vs
-     namespace: default
-   spec:
-     hosts:
-     - reviews-service
-     http:
-     - route:
-       - destination:
-           host: reviews-service
-           subset: v1
-         weight: 100
-   EOF
+   # Build all images
+   docker-compose build
+
+   # Tag for your registry
+   docker tag stock-management-app_frontend your-registry.com/stock-frontend:latest
+   docker tag stock-management-app_api-gateway your-registry.com/stock-api-gateway:latest
+   docker tag stock-management-app_inventory-v1 your-registry.com/stock-inventory:latest
+   docker tag stock-management-app_orders-v1 your-registry.com/stock-orders:latest
+   docker tag stock-management-app_users-v1 your-registry.com/stock-users:latest
+   docker tag stock-management-app_reviews-v1 your-registry.com/stock-reviews:latest
+   docker tag stock-management-app_ratings-v1 your-registry.com/stock-ratings:latest
+
+   # Push to registry
+   docker push your-registry.com/stock-frontend:latest
+   docker push your-registry.com/stock-api-gateway:latest
+   docker push your-registry.com/stock-inventory:latest
+   docker push your-registry.com/stock-orders:latest
+   docker push your-registry.com/stock-users:latest
+   docker push your-registry.com/stock-reviews:latest
+   docker push your-registry.com/stock-ratings:latest
    ```
 
-2. **Gradually introduce v2**:
+2. **Update image references** in `k8s/deployments/*.yaml` files to use your registry.
+
+3. **Deploy to Kubernetes**:
    ```bash
-   # 20% v2
-   kubectl patch vs reviews-vs -p '{"spec":{"http":[{"route":[{"destination":{"host":"reviews-service","subset":"v1"},"weight":80},{"destination":{"host":"reviews-service","subset":"v2"},"weight":20}]}]}}'
+   # Create namespace
+   kubectl create namespace stock-app
+
+   # Deploy services
+   kubectl apply -f k8s/deployments/ -n stock-app
+
+   # Wait for deployments
+   kubectl wait --for=condition=available --timeout=300s deployment --all -n stock-app
+   ```
+
+4. **Access the application**:
+   ```bash
+   # Port forward for testing
+   kubectl port-forward svc/frontend-service 8080:80 -n stock-app
    
-   # 50% v2
-   kubectl patch vs reviews-vs -p '{"spec":{"http":[{"route":[{"destination":{"host":"reviews-service","subset":"v1"},"weight":50},{"destination":{"host":"reviews-service","subset":"v2"},"weight":50}]}]}}'
+   # Access at http://localhost:8080
    ```
 
-3. **Introduce v3 with feature flag**:
-   ```bash
-   kubectl apply -f - <<EOF
-   apiVersion: networking.istio.io/v1beta1
-   kind: VirtualService
-   metadata:
-     name: reviews-vs
-     namespace: default
-   spec:
-     hosts:
-     - reviews-service
-     http:
-     - match:
-       - headers:
-           feature-flag:
-             exact: "v3-enabled"
-       route:
-       - destination:
-           host: reviews-service
-           subset: v3
-     - route:
-       - destination:
-           host: reviews-service
-           subset: v1
-         weight: 40
-       - destination:
-           host: reviews-service
-           subset: v2
-         weight: 50
-       - destination:
-           host: reviews-service
-           subset: v3
-         weight: 10
-   EOF
-   ```
+## Production Features
 
-### Progressive Canary Rollout
+### Frontend Features
+- **Product Catalog**: Browse products with search and filtering
+- **Order Management**: Place orders with quantity selection
+- **Review System**: Submit and view product reviews with star ratings
+- **User Dashboard**: View user profile and statistics
+- **Real-time Updates**: Live stock updates and notifications
+- **Responsive Design**: Optimized for desktop and mobile
 
-1. **Start with 100% v1**:
-   ```bash
-   kubectl apply -f - <<EOF
-   apiVersion: networking.istio.io/v1beta1
-   kind: VirtualService
-   metadata:
-     name: orders-vs
-     namespace: default
-   spec:
-     hosts:
-     - orders-service
-     http:
-     - route:
-       - destination:
-           host: orders-service
-           subset: v1
-         weight: 100
-   EOF
-   ```
+### Backend Features
+- **Service Versioning**: Each service supports v1/v2 (reviews also has v3)
+- **Health Checks**: All services provide health endpoints
+- **Error Handling**: Comprehensive error responses
+- **Request Logging**: Detailed request/response logging
+- **CORS Support**: Proper cross-origin resource sharing
 
-2. **Gradually increase v2 traffic**:
-   ```bash
-   # 10% v2
-   kubectl patch vs orders-vs -p '{"spec":{"http":[{"route":[{"destination":{"host":"orders-service","subset":"v1"},"weight":90},{"destination":{"host":"orders-service","subset":"v2"},"weight":10}]}]}}'
-   
-   # 50% v2
-   kubectl patch vs orders-vs -p '{"spec":{"http":[{"route":[{"destination":{"host":"orders-service","subset":"v1"},"weight":50},{"destination":{"host":"orders-service","subset":"v2"},"weight":50}]}]}}'
-   
-   # 100% v2
-   kubectl patch vs orders-vs -p '{"spec":{"http":[{"route":[{"destination":{"host":"orders-service","subset":"v2"},"weight":100}]}]}}'
-   ```
+### Production Considerations
+- **Security**: Ready for mTLS and authorization policies
+- **Monitoring**: Structured logging and health endpoints
+- **Scalability**: Stateless services with horizontal scaling support
+- **Resilience**: Error handling and graceful degradation
+- **Performance**: Optimized Docker images and NGINX configuration
 
-### Testing Circuit Breaker
+## Istio Integration
 
-1. **Generate load to trigger circuit breaker**:
-   ```bash
-   # Install hey load testing tool
-   kubectl run hey --image=williamyeh/hey --rm -it --restart=Never -- \
-     -z 60s -c 10 -H "x-user: allowed-user" \
-     http://api-gateway-service:3001/api/orders
-   ```
+This application is designed to work seamlessly with Istio service mesh:
 
-2. **Monitor circuit breaker status**:
-   ```bash
-   kubectl logs -l app=orders -c istio-proxy | grep "circuit_breakers"
-   ```
+### Traffic Management
+- **A/B Testing**: Route traffic between service versions
+- **Canary Deployments**: Gradual rollout of new versions
+- **Feature Flags**: Route to specific versions based on headers
+- **Load Balancing**: Distribute traffic across service instances
 
-## Customization
+### Security
+- **mTLS**: Automatic mutual TLS between services
+- **Authorization**: Policy-based access control
+- **Authentication**: JWT token validation
+- **Network Policies**: Zero-trust networking
 
-### Modify Traffic Splitting
-Edit the `weight` values in `k8s/istio/virtualservice.yaml` to change traffic distribution.
-
-### Adjust Circuit Breaker Settings
-Modify the `circuitBreaker` section in `k8s/istio/destinationrule.yaml`.
-
-### Change Fault Injection
-Update the `fault` section in the VirtualService configurations.
-
-### Add New Services
-1. Create a new service directory under `services/`
-2. Add Dockerfile and application code
-3. Create Kubernetes deployment and service manifests
-4. Add Istio VirtualService and DestinationRule
-5. Update the API gateway routing
-6. Add authorization policies for security
-7. Update the frontend to display the new service data
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Services not accessible**:
-   - Check if Istio sidecar injection is enabled: `kubectl get namespace -L istio-injection`
-   - Verify all pods are running: `kubectl get pods`
-
-2. **Authorization failures**:
-   - Ensure the `x-user: allowed-user` header is included in requests
-   - Check authorization policies: `kubectl get authorizationpolicy`
-
-3. **mTLS issues**:
-   - Verify peer authentication: `kubectl get peerauthentication`
-   - Check if certificates are properly configured
-
-4. **Circuit breaker not triggering**:
-   - Increase load or reduce circuit breaker thresholds in DestinationRules
-
-### Debugging Commands
-
-```bash
-# Check Istio proxy logs
-kubectl logs -l app=orders -c istio-proxy
-
-# Verify mTLS status
-istioctl authn tls-check orders-v1.default.svc.cluster.local
-
-# Check proxy configuration
-istioctl proxy-config route <pod-name>
-
-# View service mesh topology
-istioctl proxy-config cluster <pod-name>
-```
+### Observability  
+- **Distributed Tracing**: Request flow across services
+- **Metrics Collection**: Performance and business metrics
+- **Service Topology**: Visual service dependency mapping
+- **Health Monitoring**: Automated health checks and alerting
 
 ## Development
 
-### Local Development
-```bash
-# Start services individually for development
-cd frontend && npm run dev &
-cd api-gateway && npm run dev &
-cd services/orders && python app.py &
-cd services/inventory && python app.py &
-cd services/users && python app.py &
-```
+### Adding New Features
+1. Update the relevant service in `services/`
+2. Modify the API gateway routing in `api-gateway/app.js`
+3. Update the frontend components in `src/`
+4. Test with Docker Compose
+5. Update Kubernetes manifests if needed
 
-### Testing Changes
-```bash
-# Rebuild specific service
-docker-compose up --build <service-name>
+### Testing Service Versions
+- Modify the traffic split logic in the API gateway
+- Use headers like `x-canary: true` to test specific versions
+- Observe version responses in the frontend dashboard
 
-# Update Kubernetes deployment
-kubectl rollout restart deployment/<deployment-name> -n default
-```
+### Debugging
+- Check service logs: `docker-compose logs <service-name>`
+- Test individual services: Use curl commands from the API Testing section
+- Monitor health endpoints: `curl http://localhost:3001/health`
 
-## Production Considerations
+## Monitoring and Observability
 
-- **Monitoring**: Integrate with Prometheus and Grafana for comprehensive metrics
-- **Logging**: Configure centralized logging with ELK stack or similar
-- **Security**: Review and harden authorization policies for production use
-- **Scaling**: Adjust replica counts based on load requirements
-- **Resource Limits**: Fine-tune CPU and memory limits based on actual usage
-- **TLS Certificates**: Configure proper TLS certificates for production domains
+### Application Metrics
+- Product catalog performance
+- Order completion rates  
+- Review submission success
+- User engagement metrics
+- Service response times
+
+### Technical Metrics
+- Service health status
+- API gateway throughput
+- Database connection pools
+- Memory and CPU usage
+- Network latency between services
 
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly with both Docker Compose and Kubernetes
-5. Submit a pull request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
-This project is provided as-is for demonstration purposes. Use at your own discretion in production environments.
+This project is provided as-is for demonstration and educational purposes.

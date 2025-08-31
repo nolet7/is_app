@@ -10,45 +10,60 @@ CORS(app)
 VERSION = os.environ.get('SERVICE_VERSION', 'v1')
 SERVICE_NAME = 'users'
 
-# Simulate some data variations between versions
-def get_users_data():
-    base_users = [
-        {"id": "usr-001", "email": "john.doe@example.com", "name": "John Doe", "role": "customer", "active": True},
-        {"id": "usr-002", "email": "jane.smith@example.com", "name": "Jane Smith", "role": "premium", "active": True},
-        {"id": "usr-003", "email": "bob.wilson@example.com", "name": "Bob Wilson", "role": "customer", "active": False},
-        {"id": "usr-004", "email": "admin@example.com", "name": "Admin User", "role": "admin", "active": True}
-    ]
+def get_user_data():
+    user = {
+        "id": "usr-001",
+        "name": "Sarah Johnson",
+        "email": "sarah.johnson@example.com",
+        "role": "Premium Customer",
+        "joinedAt": "2023-06-15",
+        "active": True,
+        "orders_count": 23,
+        "total_spent": 2847.50
+    }
     
     if VERSION == 'v2':
-        # v2 has additional profile fields and enhanced data
-        for user in base_users:
-            user['last_login'] = '2025-01-08T09:15:00Z'
-            user['preferences'] = {
+        # v2 includes enhanced user profile
+        user.update({
+            "last_login": time.time(),
+            "preferences": {
                 "notifications": True,
                 "newsletter": random.choice([True, False]),
                 "theme": random.choice(["light", "dark"])
-            }
-            user['membership_tier'] = random.choice(['bronze', 'silver', 'gold'])
+            },
+            "membership_tier": random.choice(['bronze', 'silver', 'gold', 'platinum']),
+            "loyalty_points": random.randint(1000, 5000),
+            "shipping_address": {
+                "street": "123 Main St",
+                "city": "San Francisco",
+                "state": "CA",
+                "zip": "94105"
+            },
+            "payment_methods": ["**** 1234", "**** 5678"]
+        })
     
-    return base_users
+    return user
 
 @app.route('/health')
 def health():
-    return jsonify({"status": "healthy", "service": SERVICE_NAME, "version": VERSION})
+    return jsonify({
+        "status": "healthy", 
+        "service": SERVICE_NAME, 
+        "version": VERSION,
+        "timestamp": time.time()
+    })
 
-@app.route('/users')
-def get_users():
+@app.route('/users/current')
+def get_current_user():
     # Simulate processing time
-    time.sleep(random.uniform(0.1, 0.6))
+    time.sleep(random.uniform(0.1, 0.3))
     
-    users = get_users_data()
+    user = get_user_data()
     
     response_data = {
         "service": SERVICE_NAME,
         "version": VERSION,
-        "users": users,
-        "total_users": len(users),
-        "active_users": len([u for u in users if u['active']]),
+        "user": user,
         "timestamp": time.time()
     }
     
@@ -59,11 +74,10 @@ def get_user(user_id):
     # Simulate processing time
     time.sleep(random.uniform(0.1, 0.3))
     
-    users = get_users_data()
-    user = next((u for u in users if u['id'] == user_id), None)
-    
-    if not user:
+    if user_id != "usr-001":
         return jsonify({"error": "User not found"}), 404
+    
+    user = get_user_data()
     
     response_data = {
         "service": SERVICE_NAME,

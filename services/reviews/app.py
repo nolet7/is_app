@@ -3,6 +3,7 @@ from flask_cors import CORS
 import os
 import time
 import random
+import uuid
 
 app = Flask(__name__)
 CORS(app)
@@ -10,107 +11,68 @@ CORS(app)
 VERSION = os.environ.get('SERVICE_VERSION', 'v1')
 SERVICE_NAME = 'reviews'
 
-# Simulate different review data for each version
-def get_reviews_data():
-    base_reviews = [
-        {
-            "id": "rev-001",
-            "product_id": "LAP-001",
-            "user": "john.doe@example.com",
-            "rating": 5,
-            "title": "Excellent gaming laptop!",
-            "content": "Perfect for gaming and development work. Fast delivery too!",
-            "date": "2025-01-05"
-        },
-        {
-            "id": "rev-002", 
-            "product_id": "PHN-002",
-            "user": "jane.smith@example.com",
-            "rating": 4,
-            "title": "Great phone, good value",
-            "content": "Camera quality is amazing, battery life could be better.",
-            "date": "2025-01-03"
-        },
-        {
-            "id": "rev-003",
-            "product_id": "HDH-003", 
-            "user": "bob.wilson@example.com",
-            "rating": 5,
-            "title": "Best headphones I've owned",
-            "content": "Sound quality is incredible, very comfortable for long sessions.",
-            "date": "2025-01-01"
-        }
-    ]
-    
-    if VERSION == 'v2':
-        # v2 includes additional review features
-        for review in base_reviews:
-            review['verified_purchase'] = True
-            review['helpful_votes'] = random.randint(5, 25)
-            review['images'] = random.choice([[], ['image1.jpg'], ['image1.jpg', 'image2.jpg']])
-            review['sentiment'] = random.choice(['positive', 'neutral', 'negative'])
-            
-        # v2 has more reviews
-        base_reviews.extend([
-            {
-                "id": "rev-004",
-                "product_id": "CHR-004",
-                "user": "alice.brown@example.com", 
-                "rating": 3,
-                "title": "Decent charger",
-                "content": "Works as expected, nothing special but reliable.",
-                "date": "2024-12-28",
-                "verified_purchase": True,
-                "helpful_votes": 8,
-                "images": [],
-                "sentiment": "neutral"
-            }
-        ])
-    elif VERSION == 'v3':
-        # v3 includes AI-powered features
-        for review in base_reviews:
-            review['verified_purchase'] = True
-            review['helpful_votes'] = random.randint(10, 50)
-            review['images'] = random.choice([[], ['image1.jpg'], ['image1.jpg', 'image2.jpg']])
-            review['sentiment'] = random.choice(['positive', 'neutral', 'negative'])
-            review['ai_summary'] = f"AI Summary: {review['title'][:30]}..."
-            review['moderation_status'] = 'approved'
-            review['translation_available'] = random.choice([True, False])
-    
-    return base_reviews
+# In-memory storage for demo purposes
+reviews_db = [
+    {
+        "id": "rev-001",
+        "productId": "LAP-001",
+        "userId": "usr-002",
+        "userName": "John Doe",
+        "rating": 5,
+        "comment": "Excellent gaming laptop! Perfect for development and gaming.",
+        "createdAt": "2025-01-07T10:30:00Z",
+        "verified": True
+    },
+    {
+        "id": "rev-002",
+        "productId": "PHN-002",
+        "userId": "usr-003",
+        "userName": "Jane Smith",
+        "rating": 4,
+        "comment": "Great phone with amazing camera quality. Battery could be better.",
+        "createdAt": "2025-01-06T15:45:00Z",
+        "verified": True
+    },
+    {
+        "id": "rev-003",
+        "productId": "HDH-003",
+        "userId": "usr-004",
+        "userName": "Bob Wilson",
+        "rating": 5,
+        "comment": "Best headphones I've ever owned. Sound quality is incredible.",
+        "createdAt": "2025-01-05T09:20:00Z",
+        "verified": True
+    }
+]
 
 @app.route('/health')
 def health():
-    return jsonify({"status": "healthy", "service": SERVICE_NAME, "version": VERSION})
-
-@app.route('/reviews')
-def get_reviews():
-    # Simulate processing time
-    time.sleep(random.uniform(0.1, 0.7))
-    
-    reviews = get_reviews_data()
-    
-    response_data = {
-        "service": SERVICE_NAME,
+    return jsonify({
+        "status": "healthy", 
+        "service": SERVICE_NAME, 
         "version": VERSION,
-        "reviews": reviews,
-        "total_reviews": len(reviews),
-        "average_rating": round(sum(r['rating'] for r in reviews) / len(reviews), 2),
         "timestamp": time.time()
-    }
-    
-    return jsonify(response_data)
+    })
 
 @app.route('/reviews/<product_id>')
 def get_product_reviews(product_id):
     # Simulate processing time
-    time.sleep(random.uniform(0.1, 0.4))
+    time.sleep(random.uniform(0.1, 0.5))
     
-    reviews = get_reviews_data()
-    product_reviews = [r for r in reviews if r['product_id'] == product_id]
+    product_reviews = [r for r in reviews_db if r['productId'] == product_id]
     
-    if not product_reviews:
-        return jsonify({"error": "No reviews found for product"}), 404
+    # Add version-specific fields
+    for review in product_reviews:
+        if VERSION == 'v2':
+            review['helpful_votes'] = random.randint(5, 25)
+            review['sentiment'] = random.choice(['positive', 'neutral', 'negative'])
+            review['images'] = random.choice([[], ['image1.jpg'], ['image1.jpg', 'image2.jpg']])
+        elif VERSION == 'v3':
+            review['helpful_votes'] = random.randint(10, 50)
+            review['sentiment'] = random.choice(['positive', 'neutral', 'negative'])
+            review['ai_summary'] = f"AI Summary: {review['comment'][:30]}..."
+            review['moderation_status'] = 'approved'
+            review['translation_available'] = random.choice([True, False])
     
     response_data = {
         "service": SERVICE_NAME,
@@ -118,7 +80,86 @@ def get_product_reviews(product_id):
         "reviews": product_reviews,
         "product_id": product_id,
         "total_reviews": len(product_reviews),
-        "average_rating": round(sum(r['rating'] for r in product_reviews) / len(product_reviews), 2),
+        "average_rating": round(sum(r['rating'] for r in product_reviews) / len(product_reviews), 2) if product_reviews else 0,
+        "timestamp": time.time()
+    }
+    
+    return jsonify(response_data)
+
+@app.route('/reviews', methods=['POST'])
+def create_review():
+    # Simulate processing time
+    time.sleep(random.uniform(0.2, 0.6))
+    
+    try:
+        data = request.get_json()
+        
+        review = {
+            "id": f"rev-{uuid.uuid4().hex[:8]}",
+            "productId": data.get('productId'),
+            "userId": data.get('userId', 'usr-001'),
+            "userName": data.get('userName', 'Anonymous'),
+            "rating": data.get('rating'),
+            "comment": data.get('comment'),
+            "createdAt": time.time(),
+            "verified": True
+        }
+        
+        # Add version-specific fields
+        if VERSION == 'v2':
+            review['helpful_votes'] = 0
+            review['sentiment'] = 'positive' if review['rating'] >= 4 else 'neutral' if review['rating'] >= 3 else 'negative'
+            review['images'] = []
+        elif VERSION == 'v3':
+            review['helpful_votes'] = 0
+            review['sentiment'] = 'positive' if review['rating'] >= 4 else 'neutral' if review['rating'] >= 3 else 'negative'
+            review['ai_summary'] = f"AI Summary: {review['comment'][:30]}..."
+            review['moderation_status'] = 'pending'
+            review['translation_available'] = False
+        
+        reviews_db.append(review)
+        
+        response_data = {
+            "service": SERVICE_NAME,
+            "version": VERSION,
+            "review": review,
+            "timestamp": time.time()
+        }
+        
+        return jsonify(response_data), 201
+        
+    except Exception as e:
+        return jsonify({
+            "service": SERVICE_NAME,
+            "version": VERSION,
+            "error": str(e),
+            "timestamp": time.time()
+        }), 400
+
+@app.route('/reviews')
+def get_all_reviews():
+    # Simulate processing time
+    time.sleep(random.uniform(0.1, 0.4))
+    
+    # Add version-specific fields to all reviews
+    enhanced_reviews = []
+    for review in reviews_db:
+        enhanced_review = review.copy()
+        if VERSION == 'v2':
+            enhanced_review['helpful_votes'] = random.randint(5, 25)
+            enhanced_review['sentiment'] = random.choice(['positive', 'neutral', 'negative'])
+        elif VERSION == 'v3':
+            enhanced_review['helpful_votes'] = random.randint(10, 50)
+            enhanced_review['sentiment'] = random.choice(['positive', 'neutral', 'negative'])
+            enhanced_review['ai_summary'] = f"AI Summary: {review['comment'][:30]}..."
+            enhanced_review['moderation_status'] = 'approved'
+        enhanced_reviews.append(enhanced_review)
+    
+    response_data = {
+        "service": SERVICE_NAME,
+        "version": VERSION,
+        "reviews": enhanced_reviews,
+        "total_reviews": len(enhanced_reviews),
         "timestamp": time.time()
     }
     

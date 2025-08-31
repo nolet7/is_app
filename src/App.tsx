@@ -1,599 +1,417 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  RefreshCw, Server, Users, Package, ShoppingCart, MessageSquare, Star, 
-  AlertCircle, CheckCircle, Clock, Globe, Settings, Zap, Shield, 
-  BarChart3, Activity, TrendingUp, Play, Pause, Target, AlertTriangle
+  ShoppingCart, Package, Star, User, Plus, RefreshCw, 
+  DollarSign, TrendingUp, Users, MessageSquare, AlertCircle,
+  CheckCircle, Clock, Search, Filter, Heart
 } from 'lucide-react';
 
-interface ServiceResponse {
+interface Product {
+  id: string;
+  name: string;
+  stock: number;
+  price: number;
+  category: string;
+  image?: string;
+  description?: string;
+}
+
+interface Order {
+  id: string;
+  userId: string;
+  productId: string;
+  quantity: number;
+  total: number;
+  status: string;
+  createdAt: string;
+}
+
+interface Review {
+  id: string;
+  productId: string;
+  userId: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  verified?: boolean;
+}
+
+interface Rating {
+  productId: string;
+  averageRating: number;
+  totalReviews: number;
+  distribution: { [key: number]: number };
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  joinedAt: string;
+}
+
+interface ServiceResponse<T> {
+  data: T;
   service: string;
   version: string;
-  status: 'healthy' | 'error' | 'timeout';
-  responseTime: number;
-  timestamp: string;
-  data: any;
-  region?: string;
-}
-
-interface ServiceState {
-  [key: string]: ServiceResponse | null;
-}
-
-interface TestConfig {
-  trafficSplit: { v1: number; v2: number };
-  retryEnabled: boolean;
-  faultInjection: boolean;
-  circuitBreakerTest: boolean;
-  timeoutTest: boolean;
-}
-
-interface MetricPoint {
   timestamp: number;
   responseTime: number;
-  success: boolean;
-  service: string;
 }
 
-const SERVICES = ['orders', 'inventory', 'users', 'reviews', 'ratings'];
-
-// Mock API Gateway URL - in production this would be your actual gateway
 const API_BASE_URL = '/api';
 
 function App() {
-  const [services, setServices] = useState<ServiceState>({});
-  const [loading, setLoading] = useState(false);
-  const [autoRefresh, setAutoRefresh] = useState(false);
-  const [selectedService, setSelectedService] = useState<string | null>(null);
-  const [metrics, setMetrics] = useState<MetricPoint[]>([]);
-  const [testConfig, setTestConfig] = useState<TestConfig>({
-    trafficSplit: { v1: 70, v2: 30 },
-    retryEnabled: true,
-    faultInjection: false,
-    circuitBreakerTest: false,
-    timeoutTest: false
-  });
+  const [products, setProducts] = useState<Product[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+  const [ratings, setRatings] = useState<{ [key: string]: Rating }>({});
+  const [reviews, setReviews] = useState<{ [key: string]: Review[] }>({});
+  const [loading, setLoading] = useState(true);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [orderQuantity, setOrderQuantity] = useState(1);
+  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
+  const [notifications, setNotifications] = useState<string[]>([]);
 
-  // Simulate realistic service responses for demo
-  const generateServiceResponse = useCallback((serviceName: string): ServiceResponse => {
-    const versions = serviceName === 'reviews' ? ['v1', 'v2', 'v3'] : ['v1', 'v2'];
-    const version = Math.random() < (testConfig.trafficSplit.v1 / 100) ? 'v1' : 'v2';
+  // Simulate API calls with realistic data
+  const fetchProducts = async (): Promise<ServiceResponse<Product[]>> => {
+    await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300));
     
-    // Simulate different response times and occasional errors
-    let responseTime = Math.floor(Math.random() * 200) + 50;
-    let status: 'healthy' | 'error' | 'timeout' = 'healthy';
-    
-    if (testConfig.faultInjection && Math.random() < 0.15) {
-      status = Math.random() < 0.7 ? 'timeout' : 'error';
-      responseTime = status === 'timeout' ? 5000 : responseTime;
-    }
-    
-    if (testConfig.timeoutTest && serviceName === 'orders') {
-      status = 'timeout';
-      responseTime = 8000;
-    }
+    const mockProducts: Product[] = [
+      {
+        id: 'LAP-001',
+        name: 'Gaming Laptop Pro',
+        stock: 15,
+        price: 1299.99,
+        category: 'Electronics',
+        description: 'High-performance gaming laptop with RTX 4070 and 32GB RAM'
+      },
+      {
+        id: 'PHN-002',
+        name: 'Smartphone X1',
+        stock: 42,
+        price: 899.00,
+        category: 'Electronics',
+        description: 'Latest flagship smartphone with advanced camera system'
+      },
+      {
+        id: 'HDH-003',
+        name: 'Wireless Headphones',
+        stock: 28,
+        price: 199.99,
+        category: 'Audio',
+        description: 'Premium noise-canceling wireless headphones'
+      },
+      {
+        id: 'CHR-004',
+        name: 'USB-C Fast Charger',
+        stock: 67,
+        price: 29.99,
+        category: 'Accessories',
+        description: '65W fast charging adapter with multiple ports'
+      },
+      {
+        id: 'TAB-005',
+        name: 'Tablet Pro',
+        stock: 23,
+        price: 649.99,
+        category: 'Electronics',
+        description: '12.9-inch tablet with Apple M2 chip and 5G connectivity'
+      },
+      {
+        id: 'SPK-006',
+        name: 'Smart Speaker',
+        stock: 35,
+        price: 149.99,
+        category: 'Audio',
+        description: 'Voice-controlled smart speaker with premium sound'
+      }
+    ];
 
-    const mockData = {
-      orders: {
-        total_orders: 1247 + Math.floor(Math.random() * 100),
-        pending: 23 + Math.floor(Math.random() * 10),
-        processing: 45 + Math.floor(Math.random() * 20),
-        completed: 1179 + Math.floor(Math.random() * 50),
-        revenue: `$${(124750 + Math.random() * 10000).toFixed(2)}`,
-        avg_order_value: `$${(99.80 + Math.random() * 20).toFixed(2)}`,
-        recent_orders: [
-          { id: 'ORD-001', customer: 'john@example.com', amount: 299.99, status: 'confirmed' },
-          { id: 'ORD-002', customer: 'jane@example.com', amount: 149.50, status: 'processing' }
-        ]
-      },
-      inventory: {
-        total_items: 2847,
-        in_stock: 2654 - Math.floor(Math.random() * 100),
-        low_stock: 143 + Math.floor(Math.random() * 20),
-        out_of_stock: 50 + Math.floor(Math.random() * 10),
-        categories: 12,
-        total_value: `$${(2847392 + Math.random() * 100000).toFixed(2)}`,
-        products: [
-          { sku: 'LAP-001', name: 'Gaming Laptop', stock: 15, price: 1299.99 },
-          { sku: 'PHN-002', name: 'Smartphone', stock: 42, price: 899.00 },
-          { sku: 'HDH-003', name: 'Wireless Headphones', stock: 28, price: 199.99 }
-        ]
-      },
-      users: {
-        total_users: 15847 + Math.floor(Math.random() * 100),
-        active_users: 12654 + Math.floor(Math.random() * 50),
-        new_signups: 234 + Math.floor(Math.random() * 20),
-        premium_users: 3421 + Math.floor(Math.random() * 30),
-        retention_rate: `${(87.3 + Math.random() * 5).toFixed(1)}%`,
-        avg_session: `${(24 + Math.random() * 10).toFixed(0)}m`,
-        recent_users: [
-          { id: 'USR-001', email: 'john.doe@example.com', role: 'customer', active: true },
-          { id: 'USR-002', email: 'jane.smith@example.com', role: 'premium', active: true }
-        ]
-      },
-      reviews: {
-        total_reviews: 8934 + Math.floor(Math.random() * 100),
-        avg_rating: (4.3 + Math.random() * 0.4).toFixed(1),
-        pending_moderation: 12 + Math.floor(Math.random() * 5),
-        verified_reviews: 7821 + Math.floor(Math.random() * 50),
-        sentiment_positive: `${(78.5 + Math.random() * 10).toFixed(1)}%`,
-        response_rate: `${(94.2 + Math.random() * 3).toFixed(1)}%`,
-        recent_reviews: [
-          { id: 'REV-001', product: 'Gaming Laptop', rating: 5, comment: 'Excellent performance!' },
-          { id: 'REV-002', product: 'Smartphone', rating: 4, comment: 'Great camera quality' }
-        ]
-      },
-      ratings: {
-        overall_rating: (4.3 + Math.random() * 0.3).toFixed(1),
-        total_ratings: 12847 + Math.floor(Math.random() * 100),
-        five_star: 7234 + Math.floor(Math.random() * 50),
-        four_star: 3421 + Math.floor(Math.random() * 30),
-        three_star: 1456 + Math.floor(Math.random() * 20),
-        two_star: 456 + Math.floor(Math.random() * 10),
-        one_star: 280 + Math.floor(Math.random() * 5),
-        trending: Math.random() > 0.5 ? 'up' : 'down',
-        categories: {
-          electronics: 4.5,
-          accessories: 4.2,
-          audio: 4.7
-        }
+    return {
+      data: mockProducts,
+      service: 'inventory',
+      version: Math.random() > 0.3 ? 'v1' : 'v2',
+      timestamp: Date.now(),
+      responseTime: Math.floor(Math.random() * 200) + 50
+    };
+  };
+
+  const fetchUser = async (): Promise<ServiceResponse<User>> => {
+    await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
+    
+    const mockUser: User = {
+      id: 'usr-001',
+      name: 'Sarah Johnson',
+      email: 'sarah.johnson@example.com',
+      role: 'Premium Customer',
+      joinedAt: '2023-06-15'
+    };
+
+    return {
+      data: mockUser,
+      service: 'users',
+      version: Math.random() > 0.4 ? 'v1' : 'v2',
+      timestamp: Date.now(),
+      responseTime: Math.floor(Math.random() * 150) + 30
+    };
+  };
+
+  const fetchRatings = async (productId: string): Promise<ServiceResponse<Rating>> => {
+    await new Promise(resolve => setTimeout(resolve, 80 + Math.random() * 120));
+    
+    const mockRating: Rating = {
+      productId,
+      averageRating: 3.5 + Math.random() * 1.5,
+      totalReviews: Math.floor(Math.random() * 200) + 10,
+      distribution: {
+        5: Math.floor(Math.random() * 50) + 20,
+        4: Math.floor(Math.random() * 30) + 15,
+        3: Math.floor(Math.random() * 20) + 5,
+        2: Math.floor(Math.random() * 10) + 2,
+        1: Math.floor(Math.random() * 5) + 1
       }
     };
 
     return {
-      service: serviceName,
-      version,
-      status,
-      responseTime,
-      timestamp: new Date().toISOString(),
-      data: {
-        service: serviceName,
-        version,
-        ...mockData[serviceName as keyof typeof mockData],
-        timestamp: Date.now()
-      },
-      region: ['us-east-1', 'us-west-2', 'eu-west-1'][Math.floor(Math.random() * 3)]
-    };
-  }, [testConfig]);
-
-  const fetchService = useCallback(async (serviceName: string): Promise<ServiceResponse> => {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 300));
-    
-    // Add metric point
-    const response = generateServiceResponse(serviceName);
-    const metricPoint: MetricPoint = {
+      data: mockRating,
+      service: 'ratings',
+      version: Math.random() > 0.25 ? 'v1' : 'v2',
       timestamp: Date.now(),
-      responseTime: response.responseTime,
-      success: response.status === 'healthy',
-      service: serviceName
+      responseTime: Math.floor(Math.random() * 100) + 40
     };
-    
-    setMetrics(prev => [...prev.slice(-50), metricPoint]);
-    
-    return response;
-  }, [generateServiceResponse]);
+  };
 
-  const fetchAllServices = useCallback(async () => {
+  const fetchReviews = async (productId: string): Promise<ServiceResponse<Review[]>> => {
+    await new Promise(resolve => setTimeout(resolve, 150 + Math.random() * 250));
+    
+    const mockReviews: Review[] = [
+      {
+        id: 'rev-001',
+        productId,
+        userId: 'usr-002',
+        rating: 5,
+        comment: 'Excellent product! Exceeded my expectations.',
+        createdAt: '2025-01-07T10:30:00Z',
+        verified: true
+      },
+      {
+        id: 'rev-002',
+        productId,
+        userId: 'usr-003',
+        rating: 4,
+        comment: 'Good quality, fast shipping. Would recommend.',
+        createdAt: '2025-01-06T15:45:00Z',
+        verified: true
+      }
+    ];
+
+    return {
+      data: mockReviews,
+      service: 'reviews',
+      version: Math.random() > 0.2 ? 'v1' : Math.random() > 0.5 ? 'v2' : 'v3',
+      timestamp: Date.now(),
+      responseTime: Math.floor(Math.random() * 180) + 60
+    };
+  };
+
+  const createOrder = async (productId: string, quantity: number): Promise<ServiceResponse<Order>> => {
+    await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 400));
+    
+    const product = products.find(p => p.id === productId);
+    const mockOrder: Order = {
+      id: `ORD-${Date.now()}`,
+      userId: user?.id || 'usr-001',
+      productId,
+      quantity,
+      total: (product?.price || 0) * quantity,
+      status: 'confirmed',
+      createdAt: new Date().toISOString()
+    };
+
+    return {
+      data: mockOrder,
+      service: 'orders',
+      version: Math.random() > 0.3 ? 'v1' : 'v2',
+      timestamp: Date.now(),
+      responseTime: Math.floor(Math.random() * 300) + 100
+    };
+  };
+
+  const submitReview = async (productId: string, rating: number, comment: string): Promise<ServiceResponse<Review>> => {
+    await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300));
+    
+    const mockReview: Review = {
+      id: `rev-${Date.now()}`,
+      productId,
+      userId: user?.id || 'usr-001',
+      rating,
+      comment,
+      createdAt: new Date().toISOString(),
+      verified: true
+    };
+
+    return {
+      data: mockReview,
+      service: 'reviews',
+      version: Math.random() > 0.2 ? 'v1' : Math.random() > 0.5 ? 'v2' : 'v3',
+      timestamp: Date.now(),
+      responseTime: Math.floor(Math.random() * 250) + 80
+    };
+  };
+
+  const loadData = async () => {
     setLoading(true);
     try {
-      const responses = await Promise.all(
-        SERVICES.map(service => fetchService(service))
+      const [productsResponse, userResponse] = await Promise.all([
+        fetchProducts(),
+        fetchUser()
+      ]);
+
+      setProducts(productsResponse.data);
+      setUser(userResponse.data);
+
+      // Load ratings for all products
+      const ratingsPromises = productsResponse.data.map(product => 
+        fetchRatings(product.id).then(response => ({ [product.id]: response.data }))
       );
-      
-      const newState: ServiceState = {};
-      responses.forEach(response => {
-        newState[response.service] = response;
-      });
-      
-      setServices(newState);
+      const ratingsResults = await Promise.all(ratingsPromises);
+      const ratingsMap = ratingsResults.reduce((acc, rating) => ({ ...acc, ...rating }), {});
+      setRatings(ratingsMap);
+
+      // Load reviews for all products
+      const reviewsPromises = productsResponse.data.map(product => 
+        fetchReviews(product.id).then(response => ({ [product.id]: response.data }))
+      );
+      const reviewsResults = await Promise.all(reviewsPromises);
+      const reviewsMap = reviewsResults.reduce((acc, review) => ({ ...acc, ...review }), {});
+      setReviews(reviewsMap);
+
     } catch (error) {
-      console.error('Failed to fetch services:', error);
+      console.error('Failed to load data:', error);
+      addNotification('Failed to load application data');
     } finally {
       setLoading(false);
     }
-  }, [fetchService]);
-
-  const testCircuitBreaker = async () => {
-    setTestConfig(prev => ({ ...prev, circuitBreakerTest: true }));
-    
-    // Simulate burst of requests
-    const promises = Array(20).fill(null).map(() => fetchService('orders'));
-    await Promise.all(promises);
-    
-    setTimeout(() => {
-      setTestConfig(prev => ({ ...prev, circuitBreakerTest: false }));
-    }, 3000);
   };
 
-  const testTimeout = async () => {
-    setTestConfig(prev => ({ ...prev, timeoutTest: true }));
-    await fetchService('orders');
+  const addNotification = (message: string) => {
+    setNotifications(prev => [...prev, message]);
     setTimeout(() => {
-      setTestConfig(prev => ({ ...prev, timeoutTest: false }));
-    }, 2000);
+      setNotifications(prev => prev.slice(1));
+    }, 5000);
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!selectedProduct) return;
+    
+    try {
+      const response = await createOrder(selectedProduct.id, orderQuantity);
+      addNotification(`Order ${response.data.id} placed successfully! Total: $${response.data.total.toFixed(2)}`);
+      setShowOrderModal(false);
+      setOrderQuantity(1);
+      
+      // Update stock locally
+      setProducts(prev => prev.map(p => 
+        p.id === selectedProduct.id 
+          ? { ...p, stock: Math.max(0, p.stock - orderQuantity) }
+          : p
+      ));
+    } catch (error) {
+      addNotification('Failed to place order. Please try again.');
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!selectedProduct) return;
+    
+    try {
+      const response = await submitReview(selectedProduct.id, reviewForm.rating, reviewForm.comment);
+      addNotification('Review submitted successfully!');
+      setShowReviewModal(false);
+      setReviewForm({ rating: 5, comment: '' });
+      
+      // Update reviews locally
+      setReviews(prev => ({
+        ...prev,
+        [selectedProduct.id]: [...(prev[selectedProduct.id] || []), response.data]
+      }));
+    } catch (error) {
+      addNotification('Failed to submit review. Please try again.');
+    }
   };
 
   useEffect(() => {
-    fetchAllServices();
-  }, [fetchAllServices]);
+    loadData();
+  }, []);
 
-  useEffect(() => {
-    if (autoRefresh) {
-      const interval = setInterval(fetchAllServices, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [autoRefresh, fetchAllServices]);
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.category.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
-  const getServiceIcon = (service: string) => {
-    switch (service) {
-      case 'orders': return <ShoppingCart className="h-6 w-6" />;
-      case 'inventory': return <Package className="h-6 w-6" />;
-      case 'users': return <Users className="h-6 w-6" />;
-      case 'reviews': return <MessageSquare className="h-6 w-6" />;
-      case 'ratings': return <Star className="h-6 w-6" />;
-      default: return <Server className="h-6 w-6" />;
-    }
+  const categories = ['all', ...Array.from(new Set(products.map(p => p.category)))];
+
+  const renderStars = (rating: number) => {
+    return Array.from({ length: 5 }, (_, i) => (
+      <Star
+        key={i}
+        className={`h-4 w-4 ${
+          i < Math.floor(rating) 
+            ? 'text-yellow-400 fill-current' 
+            : i < rating 
+            ? 'text-yellow-400 fill-current opacity-50' 
+            : 'text-gray-300'
+        }`}
+      />
+    ));
   };
 
-  const getVersionColor = (version: string) => {
-    switch (version) {
-      case 'v1': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'v2': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-      case 'v3': return 'bg-purple-100 text-purple-800 border-purple-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'healthy': return 'text-emerald-500';
-      case 'timeout': return 'text-amber-500';
-      case 'error': return 'text-red-500';
-      default: return 'text-gray-500';
-    }
-  };
-
-  const ServiceCard: React.FC<{ service: ServiceResponse | null; onTest: () => void }> = ({ service, onTest }) => {
-    if (!service) {
-      return (
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 animate-pulse">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              <div className="p-3 bg-gray-100 rounded-xl">
-                <div className="h-6 w-6 bg-gray-200 rounded"></div>
-              </div>
-              <div>
-                <div className="h-4 w-24 bg-gray-200 rounded mb-2"></div>
-                <div className="h-3 w-16 bg-gray-200 rounded"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    const truncatedData = JSON.stringify(service.data, null, 2).slice(0, 200) + '...';
-
+  if (loading) {
     return (
-      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:shadow-lg transition-all duration-200">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <div className={`p-3 rounded-xl ${
-              service.status === 'healthy' ? 'bg-emerald-50' : 
-              service.status === 'timeout' ? 'bg-amber-50' : 'bg-red-50'
-            }`}>
-              <div className={getStatusColor(service.status)}>
-                {getServiceIcon(service.service)}
-              </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 capitalize">{service.service}</h3>
-              <div className="flex items-center space-x-2 text-sm text-gray-500">
-                <Clock className="h-3 w-3" />
-                <span>{service.responseTime}ms</span>
-                {service.region && (
-                  <>
-                    <span>•</span>
-                    <Globe className="h-3 w-3" />
-                    <span>{service.region}</span>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getVersionColor(service.version)}`}>
-              {service.version.toUpperCase()}
-            </span>
-            {service.status === 'healthy' ? (
-              <CheckCircle className="h-5 w-5 text-emerald-500" />
-            ) : service.status === 'timeout' ? (
-              <Clock className="h-5 w-5 text-amber-500" />
-            ) : (
-              <AlertCircle className="h-5 w-5 text-red-500" />
-            )}
-          </div>
-        </div>
-
-        <div className="mb-4">
-          <div className={`px-3 py-2 rounded-lg text-sm font-medium ${
-            service.status === 'healthy' ? 'bg-emerald-50 text-emerald-700' :
-            service.status === 'timeout' ? 'bg-amber-50 text-amber-700' :
-            'bg-red-50 text-red-700'
-          }`}>
-            Status: {service.status === 'healthy' ? 'Healthy' : service.status === 'timeout' ? 'Timeout' : 'Error'}
-          </div>
-        </div>
-
-        <div className="bg-gray-50 rounded-lg p-3 mb-4">
-          <h4 className="text-xs font-medium text-gray-700 mb-2">Sample Response:</h4>
-          <pre className="text-xs text-gray-600 overflow-hidden">
-            {truncatedData}
-          </pre>
-        </div>
-
-        <button
-          onClick={onTest}
-          className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-        >
-          <Play className="h-4 w-4" />
-          <span>Test Service</span>
-        </button>
-
-        <div className="mt-3 text-xs text-gray-400">
-          Last updated: {new Date(service.timestamp).toLocaleString()}
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading application...</p>
         </div>
       </div>
     );
-  };
-
-  const ControlPanel: React.FC = () => (
-    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-      <div className="flex items-center space-x-3 mb-6">
-        <div className="p-3 bg-purple-50 rounded-xl">
-          <Settings className="h-6 w-6 text-purple-600" />
-        </div>
-        <h2 className="text-xl font-bold text-gray-900">Istio Testing Controls</h2>
-      </div>
-
-      <div className="space-y-6">
-        {/* Traffic Split Control */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Traffic Split (A/B Testing)
-          </label>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Version 1</span>
-              <span className="text-sm font-semibold text-blue-600">{testConfig.trafficSplit.v1}%</span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={testConfig.trafficSplit.v1}
-              onChange={(e) => {
-                const v1 = parseInt(e.target.value);
-                setTestConfig(prev => ({
-                  ...prev,
-                  trafficSplit: { v1, v2: 100 - v1 }
-                }));
-              }}
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-            />
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Version 2</span>
-              <span className="text-sm font-semibold text-emerald-600">{testConfig.trafficSplit.v2}%</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Feature Toggles */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <label className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
-            <input
-              type="checkbox"
-              checked={testConfig.retryEnabled}
-              onChange={(e) => setTestConfig(prev => ({ ...prev, retryEnabled: e.target.checked }))}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <div>
-              <span className="text-sm font-medium text-gray-900">Enable Retries</span>
-              <p className="text-xs text-gray-500">Automatic retry on failures</p>
-            </div>
-          </label>
-
-          <label className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
-            <input
-              type="checkbox"
-              checked={testConfig.faultInjection}
-              onChange={(e) => setTestConfig(prev => ({ ...prev, faultInjection: e.target.checked }))}
-              className="rounded border-gray-300 text-amber-600 focus:ring-amber-500"
-            />
-            <div>
-              <span className="text-sm font-medium text-gray-900">Fault Injection</span>
-              <p className="text-xs text-gray-500">Simulate delays and errors</p>
-            </div>
-          </label>
-        </div>
-
-        {/* Test Buttons */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <button
-            onClick={testCircuitBreaker}
-            disabled={testConfig.circuitBreakerTest}
-            className="flex items-center justify-center space-x-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-          >
-            <Target className="h-4 w-4" />
-            <span>{testConfig.circuitBreakerTest ? 'Testing...' : 'Test Circuit Breaker'}</span>
-          </button>
-
-          <button
-            onClick={testTimeout}
-            disabled={testConfig.timeoutTest}
-            className="flex items-center justify-center space-x-2 px-4 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-          >
-            <Clock className="h-4 w-4" />
-            <span>{testConfig.timeoutTest ? 'Testing...' : 'Test Timeout'}</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  const MetricsChart: React.FC = () => {
-    const recentMetrics = metrics.slice(-20);
-    const maxResponseTime = Math.max(...recentMetrics.map(m => m.responseTime), 100);
-    
-    return (
-      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-        <div className="flex items-center space-x-3 mb-6">
-          <div className="p-3 bg-blue-50 rounded-xl">
-            <BarChart3 className="h-6 w-6 text-blue-600" />
-          </div>
-          <h2 className="text-xl font-bold text-gray-900">Real-Time Metrics</h2>
-        </div>
-
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-emerald-600">
-              {((recentMetrics.filter(m => m.success).length / Math.max(recentMetrics.length, 1)) * 100).toFixed(1)}%
-            </div>
-            <div className="text-sm text-gray-500">Success Rate</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">
-              {recentMetrics.length > 0 ? Math.round(recentMetrics.reduce((sum, m) => sum + m.responseTime, 0) / recentMetrics.length) : 0}ms
-            </div>
-            <div className="text-sm text-gray-500">Avg Response</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-600">{recentMetrics.length}</div>
-            <div className="text-sm text-gray-500">Recent Requests</div>
-          </div>
-        </div>
-
-        <div className="h-32 flex items-end space-x-1">
-          {recentMetrics.map((metric, index) => (
-            <div
-              key={index}
-              className={`flex-1 rounded-t ${metric.success ? 'bg-emerald-500' : 'bg-red-500'} opacity-70 hover:opacity-100 transition-opacity`}
-              style={{ height: `${(metric.responseTime / maxResponseTime) * 100}%` }}
-              title={`${metric.service}: ${metric.responseTime}ms - ${metric.success ? 'Success' : 'Failed'}`}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  const ServiceModal: React.FC<{ service: ServiceResponse; onClose: () => void }> = ({ service, onClose }) => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-y-auto">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className={`p-3 rounded-xl ${
-                service.status === 'healthy' ? 'bg-emerald-50' : 
-                service.status === 'timeout' ? 'bg-amber-50' : 'bg-red-50'
-              }`}>
-                <div className={getStatusColor(service.status)}>
-                  {getServiceIcon(service.service)}
-                </div>
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 capitalize">{service.service} Service</h2>
-                <div className="flex items-center space-x-4 text-sm text-gray-500">
-                  <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${getVersionColor(service.version)}`}>
-                    {service.version.toUpperCase()}
-                  </span>
-                  <span>{service.responseTime}ms</span>
-                  {service.region && <span>{service.region}</span>}
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-        
-        <div className="p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Service Details</h3>
-              <div className="bg-gray-50 rounded-xl p-4">
-                <pre className="text-sm text-gray-600 overflow-x-auto whitespace-pre-wrap">
-                  {JSON.stringify(service.data, null, 2)}
-                </pre>
-              </div>
-            </div>
-            
-            {service.service === 'inventory' && service.data.products && (
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Product Inventory</h3>
-                <div className="space-y-3">
-                  {service.data.products.map((product: any, index: number) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <div className="font-medium text-gray-900">{product.name}</div>
-                        <div className="text-sm text-gray-500">SKU: {product.sku}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-semibold text-gray-900">${product.price}</div>
-                        <div className={`text-sm ${product.stock > 20 ? 'text-emerald-600' : product.stock > 5 ? 'text-amber-600' : 'text-red-600'}`}>
-                          {product.stock} in stock
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
-              <div className="p-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl shadow-lg">
-                <Server className="h-8 w-8 text-white" />
+              <div className="p-2 bg-blue-600 rounded-lg">
+                <Package className="h-6 w-6 text-white" />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Istio Microservices Demo – Production App
-                </h1>
-                <p className="text-gray-600">Real-time service mesh monitoring and testing</p>
-              </div>
+              <h1 className="text-xl font-bold text-gray-900">
+                Stock Management & Reviews App
+              </h1>
             </div>
             
             <div className="flex items-center space-x-4">
-              <label className="flex items-center space-x-2 text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={autoRefresh}
-                  onChange={(e) => setAutoRefresh(e.target.checked)}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="text-sm font-medium">Auto-refresh</span>
-              </label>
-              
+              {user && (
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <User className="h-4 w-4" />
+                  <span>Welcome, {user.name}</span>
+                  <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                    {user.role}
+                  </span>
+                </div>
+              )}
               <button
-                onClick={fetchAllServices}
-                disabled={loading}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors duration-200"
+                onClick={loadData}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className="h-4 w-4" />
                 <span>Refresh</span>
               </button>
             </div>
@@ -601,209 +419,321 @@ function App() {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8">
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold text-gray-900">5</div>
-                <div className="text-sm text-gray-500">Active Services</div>
-              </div>
-              <div className="p-3 bg-blue-50 rounded-xl">
-                <Server className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
+      {/* Notifications */}
+      <div className="fixed top-4 right-4 z-50 space-y-2">
+        {notifications.map((notification, index) => (
+          <div
+            key={index}
+            className="bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg animate-slide-in"
+          >
+            {notification}
           </div>
-          
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold text-emerald-600">
-                  {((metrics.filter(m => m.success).length / Math.max(metrics.length, 1)) * 100).toFixed(1)}%
-                </div>
-                <div className="text-sm text-gray-500">Success Rate</div>
-              </div>
-              <div className="p-3 bg-emerald-50 rounded-xl">
-                <CheckCircle className="h-6 w-6 text-emerald-600" />
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold text-purple-600">
-                  {metrics.length > 0 ? Math.round(metrics.slice(-10).reduce((sum, m) => sum + m.responseTime, 0) / Math.min(metrics.length, 10)) : 0}ms
-                </div>
-                <div className="text-sm text-gray-500">Avg Response</div>
-              </div>
-              <div className="p-3 bg-purple-50 rounded-xl">
-                <Zap className="h-6 w-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold text-amber-600">{metrics.length}</div>
-                <div className="text-sm text-gray-500">Total Requests</div>
-              </div>
-              <div className="p-3 bg-amber-50 rounded-xl">
-                <Activity className="h-6 w-6 text-amber-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-          {/* Control Panel */}
-          <div className="lg:col-span-1">
-            <ControlPanel />
-          </div>
-          
-          {/* Metrics Chart */}
-          <div className="lg:col-span-2">
-            <MetricsChart />
-          </div>
-        </div>
-
-        {/* Service Cards */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Service Status Dashboard</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-            {SERVICES.map(serviceName => (
-              <ServiceCard
-                key={serviceName}
-                service={services[serviceName]}
-                onTest={() => fetchService(serviceName)}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Istio Features Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="p-3 bg-blue-50 rounded-xl">
-                <BarChart3 className="h-6 w-6 text-blue-600" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900">Traffic Management</h3>
-            </div>
-            <ul className="space-y-2 text-sm text-gray-600">
-              <li>• A/B testing with traffic splitting</li>
-              <li>• Canary deployments</li>
-              <li>• Blue-green deployments</li>
-              <li>• Request routing and load balancing</li>
-              <li>• Traffic mirroring</li>
-            </ul>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="p-3 bg-emerald-50 rounded-xl">
-                <Shield className="h-6 w-6 text-emerald-600" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900">Security</h3>
-            </div>
-            <ul className="space-y-2 text-sm text-gray-600">
-              <li>• Mutual TLS (mTLS) encryption</li>
-              <li>• Authorization policies</li>
-              <li>• JWT token validation</li>
-              <li>• Rate limiting and throttling</li>
-              <li>• Zero-trust networking</li>
-            </ul>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="p-3 bg-purple-50 rounded-xl">
-                <Activity className="h-6 w-6 text-purple-600" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900">Resilience</h3>
-            </div>
-            <ul className="space-y-2 text-sm text-gray-600">
-              <li>• Circuit breaking</li>
-              <li>• Automatic retries</li>
-              <li>• Timeout policies</li>
-              <li>• Fault injection testing</li>
-              <li>• Outlier detection</li>
-            </ul>
-          </div>
-        </div>
-
-        {/* Architecture Diagram */}
-        <div className="bg-white rounded-xl shadow-sm p-8 border border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Microservices Architecture</h2>
-          
-          <div className="flex flex-col items-center space-y-8">
-            {/* Frontend Layer */}
-            <div className="flex items-center space-x-4 p-4 bg-blue-50 rounded-xl border-2 border-blue-200">
-              <Server className="h-8 w-8 text-blue-600" />
-              <div>
-                <div className="font-bold text-blue-900">React Frontend</div>
-                <div className="text-sm text-blue-700">User Interface & Dashboard</div>
-              </div>
-            </div>
-
-            {/* Arrow */}
-            <div className="text-gray-400">
-              ↓
-            </div>
-
-            {/* API Gateway */}
-            <div className="flex items-center space-x-4 p-4 bg-purple-50 rounded-xl border-2 border-purple-200">
-              <Shield className="h-8 w-8 text-purple-600" />
-              <div>
-                <div className="font-bold text-purple-900">Istio Gateway + API Gateway</div>
-                <div className="text-sm text-purple-700">Traffic Management & Security</div>
-              </div>
-            </div>
-
-            {/* Arrow */}
-            <div className="text-gray-400">
-              ↓
-            </div>
-
-            {/* Microservices */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              {SERVICES.map(serviceName => (
-                <div key={serviceName} className="flex flex-col items-center space-y-2 p-4 bg-emerald-50 rounded-xl border-2 border-emerald-200">
-                  {getServiceIcon(serviceName)}
-                  <div className="text-sm font-medium text-emerald-900 capitalize">{serviceName}</div>
-                  <div className="text-xs text-emerald-700">v1 / v2</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="text-center mt-12 pt-8 border-t border-gray-200">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg">
-              <Server className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-lg font-semibold text-gray-700">Powered by Istio Service Mesh</span>
-          </div>
-          <p className="text-gray-500 max-w-3xl mx-auto">
-            This production-ready application demonstrates enterprise-grade microservices architecture 
-            with advanced traffic management, security policies, and observability features. 
-            Use the testing controls to experiment with Istio's powerful capabilities.
-          </p>
-        </div>
+        ))}
       </div>
 
-      {/* Service Detail Modal */}
-      {selectedService && services[selectedService] && (
-        <ServiceModal
-          service={services[selectedService] as ServiceResponse}
-          onClose={() => setSelectedService(null)}
-        />
-      )}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Dashboard Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Products</p>
+                <p className="text-2xl font-bold text-gray-900">{products.length}</p>
+              </div>
+              <div className="p-3 bg-blue-50 rounded-lg">
+                <Package className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Stock</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {products.reduce((sum, p) => sum + p.stock, 0)}
+                </p>
+              </div>
+              <div className="p-3 bg-green-50 rounded-lg">
+                <TrendingUp className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Avg Rating</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {Object.values(ratings).length > 0 
+                    ? (Object.values(ratings).reduce((sum, r) => sum + r.averageRating, 0) / Object.values(ratings).length).toFixed(1)
+                    : '0.0'
+                  }
+                </p>
+              </div>
+              <div className="p-3 bg-yellow-50 rounded-lg">
+                <Star className="h-6 w-6 text-yellow-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Reviews</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {Object.values(ratings).reduce((sum, r) => sum + r.totalReviews, 0)}
+                </p>
+              </div>
+              <div className="p-3 bg-purple-50 rounded-lg">
+                <MessageSquare className="h-6 w-6 text-purple-600" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Search and Filter */}
+        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200 mb-8">
+          <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
+              >
+                {categories.map(category => (
+                  <option key={category} value={category}>
+                    {category === 'all' ? 'All Categories' : category}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Products Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredProducts.map(product => {
+            const productRating = ratings[product.id];
+            const productReviews = reviews[product.id] || [];
+            
+            return (
+              <div
+                key={product.id}
+                className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-200"
+              >
+                {/* Product Image Placeholder */}
+                <div className="h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                  <Package className="h-16 w-16 text-gray-400" />
+                </div>
+
+                <div className="p-6">
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900">{product.name}</h3>
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                      {product.category}
+                    </span>
+                  </div>
+
+                  <p className="text-sm text-gray-600 mb-4">{product.description}</p>
+
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="text-2xl font-bold text-gray-900">
+                      ${product.price.toFixed(2)}
+                    </div>
+                    <div className={`text-sm font-medium px-2 py-1 rounded ${
+                      product.stock > 20 ? 'bg-green-100 text-green-800' :
+                      product.stock > 5 ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {product.stock} in stock
+                    </div>
+                  </div>
+
+                  {/* Rating Display */}
+                  {productRating && (
+                    <div className="flex items-center space-x-2 mb-4">
+                      <div className="flex items-center">
+                        {renderStars(productRating.averageRating)}
+                      </div>
+                      <span className="text-sm text-gray-600">
+                        {productRating.averageRating.toFixed(1)} ({productRating.totalReviews} reviews)
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => {
+                        setSelectedProduct(product);
+                        setShowOrderModal(true);
+                      }}
+                      disabled={product.stock === 0}
+                      className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ShoppingCart className="h-4 w-4" />
+                      <span>Order</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        setSelectedProduct(product);
+                        setShowReviewModal(true);
+                      }}
+                      className="flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {/* Recent Reviews Preview */}
+                  {productReviews.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">Recent Review:</h4>
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <div className="flex items-center space-x-1 mb-1">
+                          {renderStars(productReviews[0].rating)}
+                        </div>
+                        <p className="text-sm text-gray-600 line-clamp-2">
+                          "{productReviews[0].comment}"
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Order Modal */}
+        {showOrderModal && selectedProduct && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+              <div className="p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Place Order</h3>
+                
+                <div className="mb-4">
+                  <h4 className="font-medium text-gray-900">{selectedProduct.name}</h4>
+                  <p className="text-sm text-gray-600">${selectedProduct.price.toFixed(2)} each</p>
+                  <p className="text-sm text-gray-500">{selectedProduct.stock} available</p>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Quantity
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max={selectedProduct.stock}
+                    value={orderQuantity}
+                    onChange={(e) => setOrderQuantity(parseInt(e.target.value) || 1)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Total: ${(selectedProduct.price * orderQuantity).toFixed(2)}
+                  </p>
+                </div>
+
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => setShowOrderModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handlePlaceOrder}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Place Order
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Review Modal */}
+        {showReviewModal && selectedProduct && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+              <div className="p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Write a Review</h3>
+                
+                <div className="mb-4">
+                  <h4 className="font-medium text-gray-900">{selectedProduct.name}</h4>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Rating
+                  </label>
+                  <div className="flex space-x-1">
+                    {[1, 2, 3, 4, 5].map(star => (
+                      <button
+                        key={star}
+                        onClick={() => setReviewForm(prev => ({ ...prev, rating: star }))}
+                        className="p-1"
+                      >
+                        <Star
+                          className={`h-6 w-6 ${
+                            star <= reviewForm.rating 
+                              ? 'text-yellow-400 fill-current' 
+                              : 'text-gray-300'
+                          } hover:text-yellow-400 transition-colors`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Comment
+                  </label>
+                  <textarea
+                    value={reviewForm.comment}
+                    onChange={(e) => setReviewForm(prev => ({ ...prev, comment: e.target.value }))}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Share your experience with this product..."
+                  />
+                </div>
+
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => setShowReviewModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmitReview}
+                    disabled={!reviewForm.comment.trim()}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Submit Review
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

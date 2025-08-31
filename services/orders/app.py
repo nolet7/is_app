@@ -3,6 +3,7 @@ from flask_cors import CORS
 import os
 import time
 import random
+import uuid
 
 app = Flask(__name__)
 CORS(app)
@@ -10,39 +11,73 @@ CORS(app)
 VERSION = os.environ.get('SERVICE_VERSION', 'v1')
 SERVICE_NAME = 'orders'
 
-# Simulate some data variations between versions
-def get_orders_data():
-    base_orders = [
-        {"id": "ord-001", "customer": "john.doe@example.com", "total": 299.99, "status": "confirmed"},
-        {"id": "ord-002", "customer": "jane.smith@example.com", "total": 149.50, "status": "processing"},
-        {"id": "ord-003", "customer": "bob.wilson@example.com", "total": 75.25, "status": "shipped"}
-    ]
-    
-    if VERSION == 'v2':
-        # v2 has additional fields and different pricing
-        for order in base_orders:
-            order['priority'] = random.choice(['high', 'medium', 'low'])
-            order['estimated_delivery'] = '2-3 business days'
-            order['total'] = round(order['total'] * 1.1, 2)  # 10% higher prices in v2
-    
-    return base_orders
+# In-memory storage for demo purposes
+orders_db = []
 
 @app.route('/health')
 def health():
-    return jsonify({"status": "healthy", "service": SERVICE_NAME, "version": VERSION})
+    return jsonify({
+        "status": "healthy", 
+        "service": SERVICE_NAME, 
+        "version": VERSION,
+        "timestamp": time.time()
+    })
+
+@app.route('/orders', methods=['POST'])
+def create_order():
+    # Simulate processing time
+    time.sleep(random.uniform(0.2, 0.6))
+    
+    try:
+        data = request.get_json()
+        
+        order = {
+            "id": f"ORD-{int(time.time())}-{random.randint(1000, 9999)}",
+            "userId": data.get('userId', 'usr-001'),
+            "productId": data.get('productId'),
+            "quantity": data.get('quantity', 1),
+            "total": data.get('total', 0),
+            "status": "confirmed",
+            "createdAt": time.time()
+        }
+        
+        # v2 includes additional order features
+        if VERSION == 'v2':
+            order['priority'] = random.choice(['high', 'medium', 'low'])
+            order['estimated_delivery'] = '2-3 business days'
+            order['tracking_number'] = f"TRK-{uuid.uuid4().hex[:8].upper()}"
+            order['shipping_method'] = random.choice(['standard', 'express', 'overnight'])
+            order['payment_method'] = 'credit_card'
+        
+        orders_db.append(order)
+        
+        response_data = {
+            "service": SERVICE_NAME,
+            "version": VERSION,
+            "order": order,
+            "timestamp": time.time()
+        }
+        
+        return jsonify(response_data), 201
+        
+    except Exception as e:
+        return jsonify({
+            "service": SERVICE_NAME,
+            "version": VERSION,
+            "error": str(e),
+            "timestamp": time.time()
+        }), 400
 
 @app.route('/orders')
 def get_orders():
     # Simulate processing time
-    time.sleep(random.uniform(0.1, 0.5))
-    
-    orders = get_orders_data()
+    time.sleep(random.uniform(0.1, 0.4))
     
     response_data = {
         "service": SERVICE_NAME,
         "version": VERSION,
-        "orders": orders,
-        "count": len(orders),
+        "orders": orders_db[-10:],  # Return last 10 orders
+        "total_orders": len(orders_db),
         "timestamp": time.time()
     }
     
@@ -53,8 +88,7 @@ def get_order(order_id):
     # Simulate processing time
     time.sleep(random.uniform(0.1, 0.3))
     
-    orders = get_orders_data()
-    order = next((o for o in orders if o['id'] == order_id), None)
+    order = next((o for o in orders_db if o['id'] == order_id), None)
     
     if not order:
         return jsonify({"error": "Order not found"}), 404

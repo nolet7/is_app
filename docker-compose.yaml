@@ -3,7 +3,9 @@ version: '3.8'
 services:
   # Frontend
   frontend:
-    build: ./frontend
+    build: 
+      context: .
+      dockerfile: Dockerfile.frontend
     ports:
       - "3000:80"
     depends_on:
@@ -11,7 +13,7 @@ services:
     environment:
       - NODE_ENV=production
     networks:
-      - microservices
+      - app-network
 
   # API Gateway
   api-gateway:
@@ -19,10 +21,10 @@ services:
     ports:
       - "3001:3001"
     depends_on:
-      - orders-v1
-      - orders-v2
       - inventory-v1
       - inventory-v2
+      - orders-v1
+      - orders-v2
       - users-v1
       - users-v2
       - reviews-v1
@@ -31,31 +33,13 @@ services:
       - ratings-v1
       - ratings-v2
     environment:
-      - ORDERS_SERVICE_URL=http://orders-v1:5001
       - INVENTORY_SERVICE_URL=http://inventory-v1:5002
+      - ORDERS_SERVICE_URL=http://orders-v1:5001
       - USERS_SERVICE_URL=http://users-v1:5003
       - REVIEWS_SERVICE_URL=http://reviews-v1:5004
       - RATINGS_SERVICE_URL=http://ratings-v1:5005
     networks:
-      - microservices
-
-  # Orders Service - Version 1
-  orders-v1:
-    build: ./services/orders
-    environment:
-      - SERVICE_VERSION=v1
-      - PORT=5001
-    networks:
-      - microservices
-
-  # Orders Service - Version 2
-  orders-v2:
-    build: ./services/orders
-    environment:
-      - SERVICE_VERSION=v2
-      - PORT=5001
-    networks:
-      - microservices
+      - app-network
 
   # Inventory Service - Version 1
   inventory-v1:
@@ -64,7 +48,7 @@ services:
       - SERVICE_VERSION=v1
       - PORT=5002
     networks:
-      - microservices
+      - app-network
 
   # Inventory Service - Version 2
   inventory-v2:
@@ -73,7 +57,25 @@ services:
       - SERVICE_VERSION=v2
       - PORT=5002
     networks:
-      - microservices
+      - app-network
+
+  # Orders Service - Version 1
+  orders-v1:
+    build: ./services/orders
+    environment:
+      - SERVICE_VERSION=v1
+      - PORT=5001
+    networks:
+      - app-network
+
+  # Orders Service - Version 2
+  orders-v2:
+    build: ./services/orders
+    environment:
+      - SERVICE_VERSION=v2
+      - PORT=5001
+    networks:
+      - app-network
 
   # Users Service - Version 1
   users-v1:
@@ -82,7 +84,7 @@ services:
       - SERVICE_VERSION=v1
       - PORT=5003
     networks:
-      - microservices
+      - app-network
 
   # Users Service - Version 2
   users-v2:
@@ -91,7 +93,7 @@ services:
       - SERVICE_VERSION=v2
       - PORT=5003
     networks:
-      - microservices
+      - app-network
 
   # Reviews Service - Version 1
   reviews-v1:
@@ -100,7 +102,7 @@ services:
       - SERVICE_VERSION=v1
       - PORT=5004
     networks:
-      - microservices
+      - app-network
 
   # Reviews Service - Version 2
   reviews-v2:
@@ -109,7 +111,7 @@ services:
       - SERVICE_VERSION=v2
       - PORT=5004
     networks:
-      - microservices
+      - app-network
 
   # Reviews Service - Version 3
   reviews-v3:
@@ -118,7 +120,7 @@ services:
       - SERVICE_VERSION=v3
       - PORT=5004
     networks:
-      - microservices
+      - app-network
 
   # Ratings Service - Version 1
   ratings-v1:
@@ -127,7 +129,7 @@ services:
       - SERVICE_VERSION=v1
       - PORT=5005
     networks:
-      - microservices
+      - app-network
 
   # Ratings Service - Version 2
   ratings-v2:
@@ -136,8 +138,8 @@ services:
       - SERVICE_VERSION=v2
       - PORT=5005
     networks:
-      - microservices
+      - app-network
 
 networks:
-  microservices:
+  app-network:
     driver: bridge

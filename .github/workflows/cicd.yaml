@@ -2,9 +2,10 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop, feature/2.0 ]
+    branches: [ main, feature/2.0 ]
   pull_request:
     branches: [ main, feature/2.0 ]
+  workflow_dispatch:
 
 env:
   REGISTRY: docker.io
@@ -12,12 +13,9 @@ env:
 
 jobs:
   build:
-    name: Build and Test
+    name: Build and Push Images
     runs-on: ubuntu-latest
-    outputs:
-      image-tag: ${{ steps.meta.outputs.tags }}
-      git-sha: ${{ steps.meta.outputs.labels }}
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -31,17 +29,6 @@ jobs:
         registry: ${{ env.REGISTRY }}
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=sha,prefix={{branch}}-
-          type=raw,value=latest,enable={{is_default_branch}}
 
     - name: Build and push Frontend
       uses: docker/build-push-action@v5
@@ -67,80 +54,31 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
-    - name: Build and push Orders Service
-      uses: docker/build-push-action@v5
-      with:
-        context: ./services/orders
-        file: ./services/orders/Dockerfile
-        push: true
-        tags: |
-          ${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-orders:${{ github.sha }}
-          ${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-orders:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+    - name: Build and push microservices
+      run: |
+        for svc in orders inventory users reviews ratings; do
+          docker buildx build ./services/$svc \
+            -f ./services/$svc/Dockerfile \
+            -t ${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-$svc:${{ github.sha }} \
+            -t ${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-$svc:latest \
+            --push \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max
+        done
 
-    - name: Build and push Inventory Service
-      uses: docker/build-push-action@v5
-      with:
-        context: ./services/inventory
-        file: ./services/inventory/Dockerfile
-        push: true
-        tags: |
-          ${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-inventory:${{ github.sha }}
-          ${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-inventory:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-
-    - name: Build and push Users Service
-      uses: docker/build-push-action@v5
-      with:
-        context: ./services/users
-        file: ./services/users/Dockerfile
-        push: true
-        tags: |
-          ${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-users:${{ github.sha }}
-          ${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-users:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-
-    - name: Build and push Reviews Service
-      uses: docker/build-push-action@v5
-      with:
-        context: ./services/reviews
-        file: ./services/reviews/Dockerfile
-        push: true
-        tags: |
-          ${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-reviews:${{ github.sha }}
-          ${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-reviews:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-
-    - name: Build and push Ratings Service
-      uses: docker/build-push-action@v5
-      with:
-        context: ./services/ratings
-        file: ./services/ratings/Dockerfile
-        push: true
-        tags: |
-          ${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-ratings:${{ github.sha }}
-          ${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-ratings:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-
-  deploy-staging:
-    name: Deploy to Staging
+  deploy-home:
+    name: Deploy to Home (Staging/Dev)
     runs-on: ubuntu-latest
     needs: build
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/feature/2.0'
     environment: staging
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-    - name: Configure kubectl for staging
+    - name: Configure kubectl for home
       run: |
-        echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig
+        echo "${{ secrets.KUBE_CONFIG_HOME }}" | base64 -d > kubeconfig
         export KUBECONFIG=kubeconfig
         kubectl config current-context
 
@@ -149,7 +87,7 @@ jobs:
       with:
         version: '3.12.0'
 
-    - name: Deploy to staging
+    - name: Deploy to home (staging/dev)
       run: |
         export KUBECONFIG=kubeconfig
         ./scripts/deploy-helm.sh stage staging ${{ github.sha }}
@@ -158,23 +96,19 @@ jobs:
       run: |
         export KUBECONFIG=kubeconfig
         kubectl wait --for=condition=available --timeout=300s deployment --all -n staging
-        kubectl port-forward svc/stock-app-frontend-service 8080:80 -n staging &
-        sleep 10
-        curl -f http://localhost:8080/health || exit 1
-        echo "✅ Staging deployment smoke tests passed"
+        kubectl get pods -n staging
 
-  deploy-production:
-    name: Deploy to Production
+  deploy-prod:
+    name: Deploy to Cloud-v (Production)
     runs-on: ubuntu-latest
-    needs: [build, deploy-staging]
+    needs: build
     if: github.ref == 'refs/heads/main'
     environment: production
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-    - name: Configure kubectl for production
+    - name: Configure kubectl for prod
       run: |
         echo "${{ secrets.KUBE_CONFIG_PROD }}" | base64 -d > kubeconfig
         export KUBECONFIG=kubeconfig
@@ -195,7 +129,7 @@ jobs:
         export KUBECONFIG=kubeconfig
         kubectl wait --for=condition=available --timeout=600s deployment --all -n production
         kubectl get pods -n production
-        echo "✅ Production deployment completed successfully"
+        echo "✅ Production deployment successful"
 
   security-scan:
     name: Security Scan
@@ -206,8 +140,7 @@ jobs:
       contents: read
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master

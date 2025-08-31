@@ -90,6 +90,12 @@ function App() {
     try {
       const response = await fetch('/api/inventory');
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Backend services unavailable - received HTML instead of JSON');
+      }
+      
       const data = await response.json();
       return data.products || [];
     } catch (error) {
@@ -102,6 +108,12 @@ function App() {
     try {
       const response = await fetch('/api/users/current');
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Backend services unavailable - received HTML instead of JSON');
+      }
+      
       const data = await response.json();
       return data.user;
     } catch (error) {

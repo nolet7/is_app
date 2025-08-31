@@ -1,8 +1,8 @@
-# Development environment values
+# Development environment values (cluster-friendly)
 global:
   env: dev
   imageTag: latest
-  imagePullPolicy: Always
+  imagePullPolicy: IfNotPresent   # friendlier for local caching
 
 frontend:
   replicaCount: 1
@@ -17,8 +17,23 @@ frontend:
           - path: /
             pathType: Prefix
 
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "100m"
+
 apiGateway:
   replicaCount: 1
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "100m"
 
 microservices:
   orders:
@@ -26,48 +41,84 @@ microservices:
       v1:
         replicaCount: 1
         weight: 100
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
       v2:
         enabled: false
-  
+
   inventory:
     versions:
       v1:
         replicaCount: 1
         weight: 100
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
       v2:
         enabled: false
-  
+
   users:
     versions:
       v1:
         replicaCount: 1
         weight: 100
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
       v2:
         enabled: false
-  
+
   reviews:
     versions:
       v1:
         replicaCount: 1
         weight: 100
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
       v2:
         enabled: false
       v3:
         enabled: false
-  
+
   ratings:
     versions:
       v1:
         replicaCount: 1
         weight: 100
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
       v2:
         enabled: false
 
 istio:
-  enabled: false  # Disable Istio in dev for simplicity
-  
+  enabled: false  # Dev is kept simple: no Istio sidecars, no mTLS
+
 monitoring:
-  enabled: false
+  enabled: false  # Dev doesn’t run Prometheus/Grafana
 
 autoscaling:
-  enabled: false
+  enabled: false  # Prevent HPA from causing Pending pods in dev
+

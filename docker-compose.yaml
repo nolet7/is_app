@@ -9,7 +9,8 @@ services:
     ports:
       - "3000:80"
     depends_on:
-      - api-gateway
+      api-gateway:
+        condition: service_healthy
     environment:
       - NODE_ENV=production
     networks:
@@ -40,6 +41,12 @@ services:
       - USERS_SERVICE_URL=http://users-v1:5003
       - REVIEWS_SERVICE_URL=http://reviews-v1:5004
       - RATINGS_SERVICE_URL=http://ratings-v1:5005
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     networks:
       - app-network
 

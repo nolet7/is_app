@@ -193,7 +193,7 @@ spec:
       delay:
         percentage:
           value: 20
-        fixedDelay: 1.5s
+        fixedDelay: 2s
 
 ---
 apiVersion: networking.istio.io/v1beta1

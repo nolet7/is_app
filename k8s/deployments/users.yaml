@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
       - name: users
-        image: istio-demo/users:latest
+        image: docker.io/noletengine/stock-users:latest
         ports:
         - containerPort: 5003
         env:
@@ -77,7 +77,7 @@ spec:
     spec:
       containers:
       - name: users
-        image: istio-demo/users:latest
+        image: docker.io/noletengine/stock-users:latest
         ports:
         - containerPort: 5003
         env:
@@ -104,19 +104,3 @@ spec:
           limits:
             memory: "128Mi"
             cpu: "100m"
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: users-service
-  labels:
-    app: users
-spec:
-  type: ClusterIP
-  ports:
-  - port: 5003
-    targetPort: 5003
-    name: http
-  selector:
-    app: users

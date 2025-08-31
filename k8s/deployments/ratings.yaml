@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
       - name: ratings
-        image: istio-demo/ratings:latest
+        image: docker.io/noletengine/stock-ratings:latest
         ports:
         - containerPort: 5005
         env:
@@ -77,7 +77,7 @@ spec:
     spec:
       containers:
       - name: ratings
-        image: istio-demo/ratings:latest
+        image: docker.io/noletengine/stock-ratings:latest
         ports:
         - containerPort: 5005
         env:
@@ -104,19 +104,3 @@ spec:
           limits:
             memory: "128Mi"
             cpu: "100m"
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: ratings-service
-  labels:
-    app: ratings
-spec:
-  type: ClusterIP
-  ports:
-  - port: 5005
-    targetPort: 5005
-    name: http
-  selector:
-    app: ratings

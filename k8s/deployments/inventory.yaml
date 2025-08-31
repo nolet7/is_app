@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
       - name: inventory
-        image: istio-demo/inventory:latest
+        image: docker.io/noletengine/stock-inventory:latest
         ports:
         - containerPort: 5002
         env:
@@ -77,7 +77,7 @@ spec:
     spec:
       containers:
       - name: inventory
-        image: istio-demo/inventory:latest
+        image: docker.io/noletengine/stock-inventory:latest
         ports:
         - containerPort: 5002
         env:
@@ -104,19 +104,3 @@ spec:
           limits:
             memory: "128Mi"
             cpu: "100m"
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: inventory-service
-  labels:
-    app: inventory
-spec:
-  type: ClusterIP
-  ports:
-  - port: 5002
-    targetPort: 5002
-    name: http
-  selector:
-    app: inventory

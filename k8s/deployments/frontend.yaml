@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: istio-demo/frontend:latest
+        image: docker.io/noletengine/stock-frontend:latest
         ports:
         - containerPort: 80
         env:
@@ -48,19 +48,3 @@ spec:
           limits:
             memory: "128Mi"
             cpu: "100m"
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: frontend-service
-  labels:
-    app: frontend
-spec:
-  type: ClusterIP
-  ports:
-  - port: 80
-    targetPort: 80
-    name: http
-  selector:
-    app: frontend

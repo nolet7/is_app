@@ -81,6 +81,13 @@ microservices:
       limits:
         cpu: 100m
         memory: 128Mi
+    image:
+      repository: stock-inventory
+      tag: ""
+      pullPolicy: ""
+    service:
+      port: 5002
+      targetPort: 5002
   users:
     versions:
       v1:
@@ -102,6 +109,13 @@ microservices:
       limits:
         cpu: 100m
         memory: 128Mi
+    image:
+      repository: stock-users
+      tag: ""
+      pullPolicy: ""
+    service:
+      port: 5003
+      targetPort: 5003
   reviews:
     versions:
       v1:
@@ -125,6 +139,13 @@ microservices:
       limits:
         cpu: 100m
         memory: 128Mi
+    image:
+      repository: stock-reviews
+      tag: ""
+      pullPolicy: ""
+    service:
+      port: 5004
+      targetPort: 5004
   ratings:
     versions:
       v1:
@@ -146,6 +167,13 @@ microservices:
       limits:
         cpu: 100m
         memory: 128Mi
+    image:
+      repository: stock-ratings
+      tag: ""
+      pullPolicy: ""
+    service:
+      port: 5005
+      targetPort: 5005
 istio:
   enabled: false # Dev is kept simple: no Istio sidecars, no mTLS
 monitoring:
@@ -160,14 +188,6 @@ inventory:
   service:
     port: 5002
     targetPort: 5002
-users:
-  image:
-    repository: stock-users
-    tag: ""
-    pullPolicy: ""
-  service:
-    port: 5003
-    targetPort: 5003
 reviews:
   image:
     repository: stock-reviews

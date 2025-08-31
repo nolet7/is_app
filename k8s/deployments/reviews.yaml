@@ -16,6 +16,10 @@ spec:
       labels:
         app: reviews
         version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "5004"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
       - name: reviews
@@ -27,13 +31,6 @@ spec:
           value: "v1"
         - name: PORT
           value: "5004"
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "50m"
-          limits:
-            memory: "128Mi"
-            cpu: "100m"
         livenessProbe:
           httpGet:
             path: /health
@@ -46,6 +43,13 @@ spec:
             port: 5004
           initialDelaySeconds: 5
           periodSeconds: 5
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
 
 ---
 apiVersion: apps/v1
@@ -66,6 +70,10 @@ spec:
       labels:
         app: reviews
         version: v2
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "5004"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
       - name: reviews
@@ -77,13 +85,6 @@ spec:
           value: "v2"
         - name: PORT
           value: "5004"
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "50m"
-          limits:
-            memory: "128Mi"
-            cpu: "100m"
         livenessProbe:
           httpGet:
             path: /health
@@ -96,6 +97,13 @@ spec:
             port: 5004
           initialDelaySeconds: 5
           periodSeconds: 5
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
 
 ---
 apiVersion: apps/v1
@@ -116,6 +124,10 @@ spec:
       labels:
         app: reviews
         version: v3
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "5004"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
       - name: reviews
@@ -127,13 +139,6 @@ spec:
           value: "v3"
         - name: PORT
           value: "5004"
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "50m"
-          limits:
-            memory: "128Mi"
-            cpu: "100m"
         livenessProbe:
           httpGet:
             path: /health
@@ -146,3 +151,26 @@ spec:
             port: 5004
           initialDelaySeconds: 5
           periodSeconds: 5
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reviews-service
+  labels:
+    app: reviews
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5004
+    targetPort: 5004
+    name: http
+  selector:
+    app: reviews

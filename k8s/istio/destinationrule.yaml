@@ -2,7 +2,8 @@ apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
   name: orders-dr
-  namespace: default
+  labels:
+    app: stock-app
 spec:
   host: orders-service
   trafficPolicy:
@@ -37,7 +38,8 @@ apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
   name: inventory-dr
-  namespace: default
+  labels:
+    app: stock-app
 spec:
   host: inventory-service
   trafficPolicy:
@@ -48,14 +50,8 @@ spec:
         http1MaxPendingRequests: 10
         maxRequestsPerConnection: 2
     circuitBreaker:
-      consecutiveGatewayErrors: 5
-      consecutive5xxErrors: 5
-      interval: 30s
-      baseEjectionTime: 30s
-      maxEjectionPercent: 50
-    outlierDetection:
-      consecutive5xxErrors: 5
-      consecutiveGatewayErrors: 5
+      consecutiveGatewayErrors: 3
+      consecutive5xxErrors: 3
       interval: 30s
       baseEjectionTime: 30s
       maxEjectionPercent: 50
@@ -72,25 +68,20 @@ apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
   name: users-dr
-  namespace: default
+  labels:
+    app: stock-app
 spec:
   host: users-service
   trafficPolicy:
     connectionPool:
       tcp:
-        maxConnections: 8
+        maxConnections: 10
       http:
-        http1MaxPendingRequests: 8
+        http1MaxPendingRequests: 10
         maxRequestsPerConnection: 2
     circuitBreaker:
       consecutiveGatewayErrors: 3
       consecutive5xxErrors: 3
-      interval: 30s
-      baseEjectionTime: 30s
-      maxEjectionPercent: 50
-    outlierDetection:
-      consecutive5xxErrors: 3
-      consecutiveGatewayErrors: 3
       interval: 30s
       baseEjectionTime: 30s
       maxEjectionPercent: 50
@@ -106,42 +97,21 @@ spec:
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
-  name: api-gateway-dr
-  namespace: default
-spec:
-  host: api-gateway-service
-  trafficPolicy:
-    connectionPool:
-      tcp:
-        maxConnections: 20
-      http:
-        http1MaxPendingRequests: 20
-        maxRequestsPerConnection: 5
-
----
-apiVersion: networking.istio.io/v1beta1
-kind: DestinationRule
-metadata:
   name: reviews-dr
-  namespace: default
+  labels:
+    app: stock-app
 spec:
   host: reviews-service
   trafficPolicy:
     connectionPool:
       tcp:
-        maxConnections: 12
+        maxConnections: 10
       http:
-        http1MaxPendingRequests: 12
-        maxRequestsPerConnection: 3
+        http1MaxPendingRequests: 10
+        maxRequestsPerConnection: 2
     circuitBreaker:
-      consecutiveGatewayErrors: 4
-      consecutive5xxErrors: 4
-      interval: 30s
-      baseEjectionTime: 30s
-      maxEjectionPercent: 50
-    outlierDetection:
-      consecutive5xxErrors: 4
-      consecutiveGatewayErrors: 4
+      consecutiveGatewayErrors: 3
+      consecutive5xxErrors: 3
       interval: 30s
       baseEjectionTime: 30s
       maxEjectionPercent: 50
@@ -161,25 +131,20 @@ apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
   name: ratings-dr
-  namespace: default
+  labels:
+    app: stock-app
 spec:
   host: ratings-service
   trafficPolicy:
     connectionPool:
       tcp:
-        maxConnections: 8
+        maxConnections: 10
       http:
-        http1MaxPendingRequests: 8
+        http1MaxPendingRequests: 10
         maxRequestsPerConnection: 2
     circuitBreaker:
       consecutiveGatewayErrors: 3
       consecutive5xxErrors: 3
-      interval: 30s
-      baseEjectionTime: 30s
-      maxEjectionPercent: 50
-    outlierDetection:
-      consecutive5xxErrors: 3
-      consecutiveGatewayErrors: 3
       interval: 30s
       baseEjectionTime: 30s
       maxEjectionPercent: 50
@@ -190,3 +155,20 @@ spec:
   - name: v2
     labels:
       version: v2
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: api-gateway-dr
+  labels:
+    app: stock-app
+spec:
+  host: api-gateway-service
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 20
+      http:
+        http1MaxPendingRequests: 20
+        maxRequestsPerConnection: 5

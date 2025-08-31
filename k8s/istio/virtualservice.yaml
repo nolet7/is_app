@@ -1,13 +1,14 @@
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: istio-demo-vs
-  namespace: default
+  name: stock-app-vs
+  labels:
+    app: stock-app
 spec:
   hosts:
   - "*"
   gateways:
-  - istio-demo-gateway
+  - stock-app-gateway
   http:
   # Frontend routes
   - match:
@@ -28,7 +29,8 @@ apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
   name: api-gateway-vs
-  namespace: default
+  labels:
+    app: stock-app
 spec:
   hosts:
   - api-gateway-service
@@ -60,7 +62,8 @@ apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
   name: orders-vs
-  namespace: default
+  labels:
+    app: stock-app
 spec:
   hosts:
   - orders-service
@@ -88,7 +91,7 @@ spec:
       weight: 30
     timeout: 3s
     retries:
-      attempts: 2
+      attempts: 3
       perTryTimeout: 1s
 
 ---
@@ -96,7 +99,8 @@ apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
   name: inventory-vs
-  namespace: default
+  labels:
+    app: stock-app
 spec:
   hosts:
   - inventory-service
@@ -125,7 +129,8 @@ apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
   name: users-vs
-  namespace: default
+  labels:
+    app: stock-app
 spec:
   hosts:
   - users-service
@@ -141,7 +146,7 @@ spec:
       weight: 40
     timeout: 3s
     retries:
-      attempts: 2
+      attempts: 3
       perTryTimeout: 1s
 
 ---
@@ -149,7 +154,8 @@ apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
   name: reviews-vs
-  namespace: default
+  labels:
+    app: stock-app
 spec:
   hosts:
   - reviews-service
@@ -194,7 +200,8 @@ apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
   name: ratings-vs
-  namespace: default
+  labels:
+    app: stock-app
 spec:
   hosts:
   - ratings-service
@@ -208,7 +215,7 @@ spec:
         host: ratings-service
         subset: v2
       weight: 25
-    timeout: 2s
+    timeout: 3s
     retries:
-      attempts: 2
+      attempts: 3
       perTryTimeout: 1s

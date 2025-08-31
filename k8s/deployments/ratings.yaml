@@ -16,6 +16,10 @@ spec:
       labels:
         app: ratings
         version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "5005"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
       - name: ratings
@@ -27,13 +31,6 @@ spec:
           value: "v1"
         - name: PORT
           value: "5005"
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "50m"
-          limits:
-            memory: "128Mi"
-            cpu: "100m"
         livenessProbe:
           httpGet:
             path: /health
@@ -46,6 +43,13 @@ spec:
             port: 5005
           initialDelaySeconds: 5
           periodSeconds: 5
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
 
 ---
 apiVersion: apps/v1
@@ -66,6 +70,10 @@ spec:
       labels:
         app: ratings
         version: v2
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "5005"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
       - name: ratings
@@ -77,13 +85,6 @@ spec:
           value: "v2"
         - name: PORT
           value: "5005"
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "50m"
-          limits:
-            memory: "128Mi"
-            cpu: "100m"
         livenessProbe:
           httpGet:
             path: /health
@@ -96,3 +97,26 @@ spec:
             port: 5005
           initialDelaySeconds: 5
           periodSeconds: 5
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ratings-service
+  labels:
+    app: ratings
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5005
+    targetPort: 5005
+    name: http
+  selector:
+    app: ratings

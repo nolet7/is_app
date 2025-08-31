@@ -2,7 +2,8 @@ apiVersion: security.istio.io/v1beta1
 kind: PeerAuthentication
 metadata:
   name: default
-  namespace: default
+  labels:
+    app: stock-app
 spec:
   mtls:
     mode: STRICT
@@ -12,7 +13,8 @@ apiVersion: security.istio.io/v1beta1
 kind: PeerAuthentication
 metadata:
   name: frontend-peer-auth
-  namespace: default
+  labels:
+    app: stock-app
 spec:
   selector:
     matchLabels:
@@ -25,7 +27,8 @@ apiVersion: security.istio.io/v1beta1
 kind: PeerAuthentication
 metadata:
   name: gateway-peer-auth
-  namespace: default
+  labels:
+    app: stock-app
 spec:
   selector:
     matchLabels:

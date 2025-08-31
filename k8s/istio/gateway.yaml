@@ -1,8 +1,9 @@
 apiVersion: networking.istio.io/v1beta1
 kind: Gateway
 metadata:
-  name: istio-demo-gateway
-  namespace: default
+  name: stock-app-gateway
+  labels:
+    app: stock-app
 spec:
   selector:
     istio: ingressgateway
@@ -19,6 +20,6 @@ spec:
       protocol: HTTPS
     tls:
       mode: SIMPLE
-      credentialName: demo-tls-secret
+      credentialName: stock-app-tls
     hosts:
     - "*"

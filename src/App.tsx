@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  ShoppingCart, Package, Star, User, Plus, RefreshCw, 
-  DollarSign, TrendingUp, Users, MessageSquare, AlertCircle,
-  CheckCircle, Clock, Search, Filter, Heart
+  Package, TrendingUp, MessageSquare, Star, Search, Filter, RefreshCw
 } from 'lucide-react';
+import { Header } from './components/Header';
+import { ProductCard } from './components/ProductCard';
+import { OrderModal } from './components/OrderModal';
+import { ReviewModal } from './components/ReviewModal';
+import { LoadingSpinner } from './components/LoadingSpinner';
+import { Notification } from './components/Notification';
 
 interface Product {
   id: string;
@@ -11,7 +15,6 @@ interface Product {
   stock: number;
   price: number;
   category: string;
-  image?: string;
   description?: string;
 }
 
@@ -22,13 +25,14 @@ interface Order {
   quantity: number;
   total: number;
   status: string;
-  createdAt: string;
+  createdAt: number;
 }
 
 interface Review {
   id: string;
   productId: string;
   userId: string;
+  userName: string;
   rating: number;
   comment: string;
   createdAt: string;
@@ -48,14 +52,15 @@ interface User {
   email: string;
   role: string;
   joinedAt: string;
+  active: boolean;
+  orders_count: number;
+  total_spent: number;
 }
 
-interface ServiceResponse<T> {
-  data: T;
-  service: string;
-  version: string;
-  timestamp: number;
-  responseTime: number;
+interface NotificationItem {
+  id: string;
+  message: string;
+  type: 'success' | 'error';
 }
 
 const API_BASE_URL = '/api';
@@ -71,11 +76,19 @@ function App() {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [orderQuantity, setOrderQuantity] = useState(1);
-  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
-  const [notifications, setNotifications] = useState<string[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
-  // Fetch data from API Gateway
+  // Utility function to add notifications
+  const addNotification = (message: string, type: 'success' | 'error' = 'success') => {
+    const id = Date.now().toString();
+    setNotifications(prev => [...prev, { id, message, type }]);
+  };
+
+  const removeNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  // API functions
   const fetchProducts = async (): Promise<Product[]> => {
     const response = await fetch(`${API_BASE_URL}/inventory`);
     if (!response.ok) throw new Error('Failed to fetch products');
@@ -144,10 +157,11 @@ function App() {
     return data.review;
   };
 
+  // Load all data
   const loadData = async () => {
     setLoading(true);
     try {
-      // Fetch products and user data
+      // Fetch products and user data in parallel
       const [productsData, userData] = await Promise.all([
         fetchProducts(),
         fetchUser()
@@ -188,66 +202,53 @@ function App() {
 
     } catch (error) {
       console.error('Failed to load data:', error);
-      addNotification('Failed to load application data');
+      addNotification('Failed to load application data', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const addNotification = (message: string) => {
-    setNotifications(prev => [...prev, message]);
-    setTimeout(() => {
-      setNotifications(prev => prev.slice(1));
-    }, 5000);
-  };
-
-  const handlePlaceOrder = async () => {
-    if (!selectedProduct) return;
-    
+  // Handle order placement
+  const handlePlaceOrder = async (productId: string, quantity: number) => {
     try {
-      const order = await createOrder(selectedProduct.id, orderQuantity);
+      const order = await createOrder(productId, quantity);
       addNotification(`Order ${order.id} placed successfully! Total: $${order.total.toFixed(2)}`);
-      setShowOrderModal(false);
-      setOrderQuantity(1);
       
       // Update stock locally
       setProducts(prev => prev.map(p => 
-        p.id === selectedProduct.id 
-          ? { ...p, stock: Math.max(0, p.stock - orderQuantity) }
+        p.id === productId 
+          ? { ...p, stock: Math.max(0, p.stock - quantity) }
           : p
       ));
     } catch (error) {
       console.error('Order error:', error);
-      addNotification('Failed to place order. Please try again.');
+      addNotification('Failed to place order. Please try again.', 'error');
     }
   };
 
-  const handleSubmitReview = async () => {
-    if (!selectedProduct) return;
-    
+  // Handle review submission
+  const handleSubmitReview = async (productId: string, rating: number, comment: string) => {
     try {
-      const review = await submitReview(selectedProduct.id, reviewForm.rating, reviewForm.comment);
+      const review = await submitReview(productId, rating, comment);
       addNotification('Review submitted successfully!');
-      setShowReviewModal(false);
-      setReviewForm({ rating: 5, comment: '' });
       
       // Update reviews locally
       setReviews(prev => ({
         ...prev,
-        [selectedProduct.id]: [...(prev[selectedProduct.id] || []), review]
+        [productId]: [review, ...(prev[productId] || [])]
       }));
 
       // Update ratings count
       setRatings(prev => ({
         ...prev,
-        [selectedProduct.id]: {
-          ...prev[selectedProduct.id],
-          totalReviews: (prev[selectedProduct.id]?.totalReviews || 0) + 1
+        [productId]: {
+          ...prev[productId],
+          totalReviews: (prev[productId]?.totalReviews || 0) + 1
         }
       }));
     } catch (error) {
       console.error('Review error:', error);
-      addNotification('Failed to submit review. Please try again.');
+      addNotification('Failed to submit review. Please try again.', 'error');
     }
   };
 
@@ -255,87 +256,34 @@ function App() {
     loadData();
   }, []);
 
+  // Filter products based on search and category
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.category.toLowerCase().includes(searchTerm.toLowerCase());
+                         product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
   const categories = ['all', ...Array.from(new Set(products.map(p => p.category)))];
 
-  const renderStars = (rating: number) => {
-    return Array.from({ length: 5 }, (_, i) => (
-      <Star
-        key={i}
-        className={`h-4 w-4 ${
-          i < Math.floor(rating) 
-            ? 'text-yellow-400 fill-current' 
-            : i < rating 
-            ? 'text-yellow-400 fill-current opacity-50' 
-            : 'text-gray-300'
-        }`}
-      />
-    ));
-  };
-
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading Stock Management & Reviews App...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <div className="p-2 bg-blue-600 rounded-lg">
-                <Package className="h-6 w-6 text-white" />
-              </div>
-              <h1 className="text-xl font-bold text-gray-900">
-                Stock Management & Reviews App
-              </h1>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              {user && (
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <User className="h-4 w-4" />
-                  <span>Welcome, {user.name}</span>
-                  <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                    {user.role}
-                  </span>
-                </div>
-              )}
-              <button
-                onClick={loadData}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <RefreshCw className="h-4 w-4" />
-                <span>Refresh</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header user={user} onRefresh={loadData} />
 
       {/* Notifications */}
       <div className="fixed top-4 right-4 z-50 space-y-2">
-        {notifications.map((notification, index) => (
-          <div
-            key={index}
-            className="bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg animate-slide-in"
-          >
-            {notification}
-          </div>
+        {notifications.map((notification) => (
+          <Notification
+            key={notification.id}
+            message={notification.message}
+            type={notification.type}
+            onClose={() => removeNotification(notification.id)}
+          />
         ))}
       </div>
 
@@ -427,220 +375,100 @@ function App() {
                 ))}
               </select>
             </div>
+            <button
+              onClick={loadData}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span>Refresh</span>
+            </button>
           </div>
         </div>
 
         {/* Products Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProducts.map(product => {
-            const productRating = ratings[product.id];
-            const productReviews = reviews[product.id] || [];
-            
-            return (
-              <div
+        {filteredProducts.length === 0 ? (
+          <div className="text-center py-12">
+            <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
+            <p className="text-gray-600">
+              {searchTerm || selectedCategory !== 'all' 
+                ? 'Try adjusting your search or filter criteria.' 
+                : 'No products available at the moment.'
+              }
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredProducts.map(product => (
+              <ProductCard
                 key={product.id}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-200"
-              >
-                {/* Product Image Placeholder */}
-                <div className="h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                  <Package className="h-16 w-16 text-gray-400" />
-                </div>
-
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">{product.name}</h3>
-                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                      {product.category}
-                    </span>
-                  </div>
-
-                  <p className="text-sm text-gray-600 mb-4">{product.description}</p>
-
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="text-2xl font-bold text-gray-900">
-                      ${product.price.toFixed(2)}
-                    </div>
-                    <div className={`text-sm font-medium px-2 py-1 rounded ${
-                      product.stock > 20 ? 'bg-green-100 text-green-800' :
-                      product.stock > 5 ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {product.stock} in stock
-                    </div>
-                  </div>
-
-                  {/* Rating Display */}
-                  {productRating && (
-                    <div className="flex items-center space-x-2 mb-4">
-                      <div className="flex items-center">
-                        {renderStars(productRating.averageRating)}
-                      </div>
-                      <span className="text-sm text-gray-600">
-                        {productRating.averageRating.toFixed(1)} ({productRating.totalReviews} reviews)
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => {
-                        setSelectedProduct(product);
-                        setShowOrderModal(true);
-                      }}
-                      disabled={product.stock === 0}
-                      className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <ShoppingCart className="h-4 w-4" />
-                      <span>Order</span>
-                    </button>
-                    
-                    <button
-                      onClick={() => {
-                        setSelectedProduct(product);
-                        setShowReviewModal(true);
-                      }}
-                      className="flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  {/* Recent Reviews Preview */}
-                  {productReviews.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">Recent Review:</h4>
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <div className="flex items-center space-x-1 mb-1">
-                          {renderStars(productReviews[0].rating)}
-                        </div>
-                        <p className="text-sm text-gray-600 line-clamp-2">
-                          "{productReviews[0].comment}"
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                product={product}
+                rating={ratings[product.id] || null}
+                reviews={reviews[product.id] || []}
+                onOrder={(product) => {
+                  setSelectedProduct(product);
+                  setShowOrderModal(true);
+                }}
+                onAddReview={(product) => {
+                  setSelectedProduct(product);
+                  setShowReviewModal(true);
+                }}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Order Modal */}
         {showOrderModal && selectedProduct && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-              <div className="p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Place Order</h3>
-                
-                <div className="mb-4">
-                  <h4 className="font-medium text-gray-900">{selectedProduct.name}</h4>
-                  <p className="text-sm text-gray-600">${selectedProduct.price.toFixed(2)} each</p>
-                  <p className="text-sm text-gray-500">{selectedProduct.stock} available</p>
-                </div>
-
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Quantity
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max={selectedProduct.stock}
-                    value={orderQuantity}
-                    onChange={(e) => setOrderQuantity(parseInt(e.target.value) || 1)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <p className="text-sm text-gray-500 mt-1">
-                    Total: ${(selectedProduct.price * orderQuantity).toFixed(2)}
-                  </p>
-                </div>
-
-                <div className="flex space-x-3">
-                  <button
-                    onClick={() => setShowOrderModal(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handlePlaceOrder}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Place Order
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+          <OrderModal
+            product={selectedProduct}
+            onClose={() => {
+              setShowOrderModal(false);
+              setSelectedProduct(null);
+            }}
+            onSubmit={handlePlaceOrder}
+          />
         )}
 
         {/* Review Modal */}
         {showReviewModal && selectedProduct && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-              <div className="p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Write a Review</h3>
-                
-                <div className="mb-4">
-                  <h4 className="font-medium text-gray-900">{selectedProduct.name}</h4>
-                </div>
+          <ReviewModal
+            product={selectedProduct}
+            onClose={() => {
+              setShowReviewModal(false);
+              setSelectedProduct(null);
+            }}
+            onSubmit={handleSubmitReview}
+          />
+        )}
 
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Rating
-                  </label>
-                  <div className="flex space-x-1">
-                    {[1, 2, 3, 4, 5].map(star => (
-                      <button
-                        key={star}
-                        onClick={() => setReviewForm(prev => ({ ...prev, rating: star }))}
-                        className="p-1"
-                      >
-                        <Star
-                          className={`h-6 w-6 ${
-                            star <= reviewForm.rating 
-                              ? 'text-yellow-400 fill-current' 
-                              : 'text-gray-300'
-                          } hover:text-yellow-400 transition-colors`}
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Comment
-                  </label>
-                  <textarea
-                    value={reviewForm.comment}
-                    onChange={(e) => setReviewForm(prev => ({ ...prev, comment: e.target.value }))}
-                    rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Share your experience with this product..."
-                  />
-                </div>
-
-                <div className="flex space-x-3">
-                  <button
-                    onClick={() => setShowReviewModal(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSubmitReview}
-                    disabled={!reviewForm.comment.trim()}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Submit Review
-                  </button>
-                </div>
+        {/* User Dashboard Section */}
+        {user && (
+          <div className="mt-12 bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">User Dashboard</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-600 font-medium">Total Orders</p>
+                <p className="text-2xl font-bold text-blue-900">{user.orders_count}</p>
+              </div>
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <p className="text-sm text-green-600 font-medium">Total Spent</p>
+                <p className="text-2xl font-bold text-green-900">${user.total_spent.toFixed(2)}</p>
+              </div>
+              <div className="text-center p-4 bg-purple-50 rounded-lg">
+                <p className="text-sm text-purple-600 font-medium">Member Since</p>
+                <p className="text-lg font-bold text-purple-900">{user.joinedAt}</p>
               </div>
             </div>
           </div>
         )}
+
+        {/* Footer */}
+        <div className="text-center mt-12 pt-8 border-t border-gray-200">
+          <p className="text-sm text-gray-500">
+            Built with modern microservices architecture for scalability and reliability
+          </p>
+        </div>
       </div>
     </div>
   );

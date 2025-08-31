@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, Star, ShoppingCart, MessageSquare, Plus } from 'lucide-react';
+import { Package, Star, ShoppingCart, MessageSquare, Plus, AlertTriangle } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -31,6 +31,7 @@ interface ProductCardProps {
   reviews: Review[];
   onOrder: (product: Product) => void;
   onAddReview: (product: Product) => void;
+  onComplaint?: (product: Product) => void;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ 
@@ -38,7 +39,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   rating, 
   reviews, 
   onOrder, 
-  onAddReview 
+  onAddReview,
+  onComplaint
 }) => {
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
@@ -111,11 +113,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         )}
 
         {/* Action Buttons */}
-        <div className="flex space-x-2 mb-4">
+        <div className="grid grid-cols-3 gap-2 mb-4">
           <button
             onClick={() => onOrder(product)}
             disabled={product.stock === 0}
-            className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center justify-center space-x-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
           >
             <ShoppingCart className="h-4 w-4" />
             <span>Order</span>
@@ -123,11 +125,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           
           <button
             onClick={() => onAddReview(product)}
-            className="flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            className="flex items-center justify-center px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
             title="Add Review"
           >
             <Plus className="h-4 w-4" />
           </button>
+          
+          {onComplaint && (
+            <button
+              onClick={() => onComplaint(product)}
+              className="flex items-center justify-center px-3 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors text-sm"
+              title="Report Issue"
+            >
+              <AlertTriangle className="h-4 w-4" />
+            </button>
+          )}
         </div>
 
         {/* Recent Review Preview */}

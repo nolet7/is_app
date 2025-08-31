@@ -483,6 +483,10 @@ function App() {
                   setSelectedProduct(product);
                   setShowReviewModal(true);
                 }}
+                onComplaint={(product) => {
+                  setSelectedProduct(product);
+                  setShowComplaintModal(true);
+                }}
               />
             ))}
           </div>

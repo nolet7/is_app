@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, RefreshCw } from 'lucide-react';
+import { Package, RefreshCw, AlertTriangle } from 'lucide-react';
 
 interface User {
   id: string;
@@ -12,9 +12,10 @@ interface HeaderProps {
   user: User | null;
   onRefresh: () => void;
   isRefreshing: boolean;
+  onComplaint: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ user, onRefresh, isRefreshing }) => {
+export const Header: React.FC<HeaderProps> = ({ user, onRefresh, isRefreshing, onComplaint }) => {
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -34,6 +35,13 @@ export const Header: React.FC<HeaderProps> = ({ user, onRefresh, isRefreshing })
                 Welcome, <span className="font-medium">{user.name}</span>
               </div>
             )}
+            <button
+              onClick={onComplaint}
+              className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              <AlertTriangle className="h-4 w-4" />
+              <span>Report Issue</span>
+            </button>
             <button
               onClick={onRefresh}
               disabled={isRefreshing}

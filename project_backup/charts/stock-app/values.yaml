@@ -1,0 +1,463 @@
+# Default values for stock-app (development environment)
+global:
+  imageRegistry: docker.io/noletengine
+  imageTag: latest
+  imagePullPolicy: IfNotPresent
+  env: dev
+  
+  # Common labels applied to all resources
+  labels:
+    app.kubernetes.io/name: stock-app
+    app.kubernetes.io/instance: stock-app
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: microservice
+    app.kubernetes.io/part-of: stock-management-platform
+    app.kubernetes.io/managed-by: helm
+
+# Frontend configuration
+frontend:
+  enabled: true
+  name: frontend
+  replicaCount: 1
+  image:
+    repository: stock-frontend
+    tag: ""  # Uses global.imageTag if empty
+    pullPolicy: ""  # Uses global.imagePullPolicy if empty
+  
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 80
+    annotations: {}
+  
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: stock-app.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+  
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "100m"
+  
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  
+  podAnnotations: {}
+  podSecurityContext: {}
+  securityContext: {}
+  
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 80
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 80
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+# API Gateway configuration
+apiGateway:
+  enabled: true
+  name: api-gateway
+  replicaCount: 1
+  image:
+    repository: stock-api-gateway
+    tag: ""
+    pullPolicy: ""
+  
+  service:
+    type: ClusterIP
+    port: 3001
+    targetPort: 3001
+    annotations: {}
+  
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+  
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  
+  podAnnotations: {}
+  podSecurityContext: {}
+  securityContext: {}
+  
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 3001
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 3001
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+# Microservices configuration
+microservices:
+  # Orders service
+  orders:
+    enabled: true
+    name: orders
+    image:
+      repository: stock-orders
+      tag: ""
+      pullPolicy: ""
+    
+    versions:
+      v1:
+        enabled: true
+        replicaCount: 1
+        weight: 70
+      v2:
+        enabled: true
+        replicaCount: 1
+        weight: 30
+    
+    service:
+      type: ClusterIP
+      port: 5001
+      targetPort: 5001
+    
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
+        memory: "128Mi"
+        cpu: "100m"
+    
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 5001
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    
+    readinessProbe:
+      httpGet:
+        path: /health
+        port: 5001
+      initialDelaySeconds: 5
+      periodSeconds: 5
+
+  # Inventory service
+  inventory:
+    enabled: true
+    name: inventory
+    image:
+      repository: stock-inventory
+      tag: ""
+      pullPolicy: ""
+    
+    versions:
+      v1:
+        enabled: true
+        replicaCount: 1
+        weight: 80
+      v2:
+        enabled: true
+        replicaCount: 1
+        weight: 20
+    
+    service:
+      type: ClusterIP
+      port: 5002
+      targetPort: 5002
+    
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
+        memory: "128Mi"
+        cpu: "100m"
+    
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 5002
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    
+    readinessProbe:
+      httpGet:
+        path: /health
+        port: 5002
+      initialDelaySeconds: 5
+      periodSeconds: 5
+
+  # Users service
+  users:
+    enabled: true
+    name: users
+    image:
+      repository: stock-users
+      tag: ""
+      pullPolicy: ""
+    
+    versions:
+      v1:
+        enabled: true
+        replicaCount: 1
+        weight: 60
+      v2:
+        enabled: true
+        replicaCount: 1
+        weight: 40
+    
+    service:
+      type: ClusterIP
+      port: 5003
+      targetPort: 5003
+    
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
+        memory: "128Mi"
+        cpu: "100m"
+    
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 5003
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    
+    readinessProbe:
+      httpGet:
+        path: /health
+        port: 5003
+      initialDelaySeconds: 5
+      periodSeconds: 5
+
+  # Reviews service
+  reviews:
+    enabled: true
+    name: reviews
+    image:
+      repository: stock-reviews
+      tag: ""
+      pullPolicy: ""
+    
+    versions:
+      v1:
+        enabled: true
+        replicaCount: 1
+        weight: 50
+      v2:
+        enabled: true
+        replicaCount: 1
+        weight: 40
+      v3:
+        enabled: true
+        replicaCount: 1
+        weight: 10
+    
+    service:
+      type: ClusterIP
+      port: 5004
+      targetPort: 5004
+    
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
+        memory: "128Mi"
+        cpu: "100m"
+    
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 5004
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    
+    readinessProbe:
+      httpGet:
+        path: /health
+        port: 5004
+      initialDelaySeconds: 5
+      periodSeconds: 5
+
+  # Ratings service
+  ratings:
+    enabled: true
+    name: ratings
+    image:
+      repository: stock-ratings
+      tag: ""
+      pullPolicy: ""
+    
+    versions:
+      v1:
+        enabled: true
+        replicaCount: 1
+        weight: 75
+      v2:
+        enabled: true
+        replicaCount: 1
+        weight: 25
+    
+    service:
+      type: ClusterIP
+      port: 5005
+      targetPort: 5005
+    
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
+        memory: "128Mi"
+        cpu: "100m"
+    
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 5005
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    
+    readinessProbe:
+      httpGet:
+        path: /health
+        port: 5005
+      initialDelaySeconds: 5
+      periodSeconds: 5
+
+# Istio configuration
+istio:
+  enabled: true
+  
+  gateway:
+    enabled: true
+    name: stock-app-gateway
+    hosts:
+      - "*"
+    tls:
+      enabled: false
+      secretName: stock-app-tls
+  
+  virtualService:
+    enabled: true
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+    
+    faultInjection:
+      enabled: false
+      delay:
+        percentage: 10.0
+        fixedDelay: 2s
+      abort:
+        percentage: 5.0
+        httpStatus: 503
+  
+  destinationRule:
+    enabled: true
+    trafficPolicy:
+      connectionPool:
+        tcp:
+          maxConnections: 10
+        http:
+          http1MaxPendingRequests: 10
+          maxRequestsPerConnection: 2
+      circuitBreaker:
+        consecutiveGatewayErrors: 3
+        consecutive5xxErrors: 3
+        interval: 30s
+        baseEjectionTime: 30s
+        maxEjectionPercent: 50
+      outlierDetection:
+        consecutive5xxErrors: 3
+        consecutiveGatewayErrors: 3
+        interval: 30s
+        baseEjectionTime: 30s
+        maxEjectionPercent: 50
+  
+  peerAuthentication:
+    enabled: true
+    mtlsMode: STRICT
+  
+  authorizationPolicy:
+    enabled: true
+    allowedUsers:
+      - "allowed-user"
+
+# Environment-specific overrides
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podSecurityContext: {}
+securityContext: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Monitoring and observability
+monitoring:
+  enabled: false
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    path: /metrics
+  
+  grafana:
+    enabled: false
+    dashboards: {}
+  
+  prometheus:
+    enabled: false
+    rules: {}
+
+# Autoscaling
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80

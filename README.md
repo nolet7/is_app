@@ -4,6 +4,197 @@ A production-ready microservices application for managing product inventory, ord
 
 ## Architecture Overview
 
+This application follows a microservices architecture pattern with clear separation of concerns and service boundaries. The system is designed for scalability, maintainability, and cloud-native deployment.
+
+### System Architecture
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Web Browser   │───▶│  Load Balancer  │───▶│   NGINX Proxy   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                                        │
+                                                        ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Frontend (React)                             │
+│  • Product Catalog  • Order Management  • Review System        │
+│  • User Dashboard   • Search & Filter   • Real-time Updates    │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   API Gateway (Node.js)                        │
+│  • Request Routing    • Response Aggregation                   │
+│  • Authentication    • Rate Limiting                           │
+│  • CORS Handling     • Error Management                        │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                ┌───────────────┼───────────────┐
+                ▼               ▼               ▼
+    ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+    │ Inventory (v1/v2)│ │  Orders (v1/v2) │ │  Users (v1/v2)  │
+    │ Python + Flask  │ │ Python + Flask  │ │ Python + Flask  │
+    │ Port: 5002      │ │ Port: 5001      │ │ Port: 5003      │
+    └─────────────────┘ └─────────────────┘ └─────────────────┘
+                ▼               ▼
+    ┌─────────────────┐ ┌─────────────────┐
+    │Reviews (v1/v2/v3)│ │Ratings (v1/v2)  │
+    │ Python + Flask  │ │ Python + Flask  │
+    │ Port: 5004      │ │ Port: 5005      │
+    └─────────────────┘ └─────────────────┘
+```
+
+### Service Responsibilities
+
+#### Frontend Layer
+- **Technology**: React 18 + TypeScript + Tailwind CSS
+- **Deployment**: NGINX container serving static assets
+- **Responsibilities**:
+  - User interface and experience
+  - Client-side routing and state management
+  - API consumption and data presentation
+  - Real-time updates and notifications
+
+#### API Gateway
+- **Technology**: Node.js + Express
+- **Port**: 3001
+- **Responsibilities**:
+  - Central entry point for all API requests
+  - Request routing to appropriate microservices
+  - Response aggregation and transformation
+  - Cross-cutting concerns (CORS, logging, authentication)
+  - Load balancing and failover logic
+
+#### Microservices
+
+**Inventory Service**
+- **Technology**: Python + Flask
+- **Port**: 5002
+- **Database**: In-memory (production would use PostgreSQL/MongoDB)
+- **Responsibilities**:
+  - Product catalog management
+  - Stock level tracking
+  - Inventory updates and reservations
+  - Product search and filtering
+- **Versions**:
+  - v1: Basic product data
+  - v2: Enhanced with warehouse location and reserved stock
+
+**Orders Service**
+- **Technology**: Python + Flask
+- **Port**: 5001
+- **Database**: In-memory (production would use PostgreSQL)
+- **Responsibilities**:
+  - Order creation and processing
+  - Order status tracking
+  - Payment processing integration
+  - Order history management
+- **Versions**:
+  - v1: Basic order functionality
+  - v2: Enhanced with priority, tracking, and shipping options
+
+**Users Service**
+- **Technology**: Python + Flask
+- **Port**: 5003
+- **Database**: In-memory (production would use PostgreSQL)
+- **Responsibilities**:
+  - User profile management
+  - Authentication and authorization
+  - User preferences and settings
+  - Loyalty program management
+- **Versions**:
+  - v1: Basic user profile
+  - v2: Enhanced with preferences, loyalty points, and addresses
+
+**Reviews Service**
+- **Technology**: Python + Flask
+- **Port**: 5004
+- **Database**: In-memory (production would use PostgreSQL)
+- **Responsibilities**:
+  - Product review management
+  - Review moderation and validation
+  - Sentiment analysis
+  - Review aggregation
+- **Versions**:
+  - v1: Basic reviews with rating and comment
+  - v2: Enhanced with helpful votes and sentiment analysis
+  - v3: AI-powered features with summaries and moderation
+
+**Ratings Service**
+- **Technology**: Python + Flask
+- **Port**: 5005
+- **Database**: In-memory (production would use PostgreSQL)
+- **Responsibilities**:
+  - Rating calculation and aggregation
+  - Statistical analysis of ratings
+  - Trending and analytics
+  - Rating distribution tracking
+- **Versions**:
+  - v1: Basic rating aggregation
+  - v2: Enhanced analytics with sentiment and trending data
+
+### Data Flow
+
+1. **User Interaction**: User interacts with React frontend
+2. **API Request**: Frontend sends request to API Gateway
+3. **Service Routing**: Gateway routes request to appropriate microservice
+4. **Service Processing**: Microservice processes request and returns data
+5. **Response Aggregation**: Gateway aggregates responses if needed
+6. **Frontend Update**: Frontend receives data and updates UI
+
+### Communication Patterns
+
+- **Synchronous**: HTTP/REST for real-time operations
+- **Request/Response**: All service interactions use request/response pattern
+- **Gateway Pattern**: Centralized API gateway for external communication
+- **Service Discovery**: Services communicate via container names in Docker/K8s
+
+### Scalability Considerations
+
+- **Horizontal Scaling**: Each service can be scaled independently
+- **Load Balancing**: API Gateway distributes load across service instances
+- **Caching**: Frontend implements client-side caching for performance
+- **Database Separation**: Each service has its own data store (simulated)
+
+### Security Architecture
+
+- **API Gateway Security**: Central point for authentication and authorization
+- **Service-to-Service**: Internal communication secured via network policies
+- **Input Validation**: Each service validates incoming requests
+- **Error Handling**: Comprehensive error responses without sensitive data exposure
+
+### Deployment Architecture
+
+#### Docker Compose (Development)
+- Single-host deployment with container networking
+- Shared network for service communication
+- Volume mounts for development hot-reloading
+- Environment-based configuration
+
+#### Kubernetes (Production)
+- Multi-node deployment with pod distribution
+- Service discovery via Kubernetes DNS
+- ConfigMaps and Secrets for configuration
+- Ingress controllers for external access
+- Health checks and readiness probes
+
+### Monitoring and Observability
+
+- **Health Checks**: All services provide `/health` endpoints
+- **Logging**: Structured logging with request correlation
+- **Metrics**: Response time and error rate tracking
+- **Tracing**: Request flow tracking across services (ready for distributed tracing)
+
+### Future Enhancements (Istio Integration)
+
+This architecture is designed to seamlessly integrate with Istio service mesh:
+
+- **Traffic Management**: A/B testing, canary deployments, traffic splitting
+- **Security**: mTLS, authorization policies, JWT validation
+- **Observability**: Distributed tracing, metrics collection, service topology
+- **Resilience**: Circuit breaking, retries, timeout policies, fault injection
+
+## Architecture Overview
+
 This application demonstrates a complete microservices architecture with:
 
 - **Frontend**: React + Tailwind CSS served by NGINX

@@ -1,11 +1,11 @@
-# Staging environment values (cluster-friendly)
+# Staging environment values
 global:
   env: staging
   imageTag: staging-latest
-  imagePullPolicy: IfNotPresent
+  imagePullPolicy: Always
 
 frontend:
-  replicaCount: 1
+  replicaCount: 2
   ingress:
     enabled: true
     className: "nginx"
@@ -24,75 +24,63 @@ frontend:
 
   resources:
     requests:
-      memory: "64Mi"
-      cpu: "50m"
-    limits:
-      memory: "128Mi"
-      cpu: "100m"
-
-apiGateway:
-  replicaCount: 1
-  resources:
-    requests:
       memory: "128Mi"
       cpu: "100m"
     limits:
       memory: "256Mi"
       cpu: "200m"
 
+apiGateway:
+  replicaCount: 2
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "400m"
+
 microservices:
   orders:
     versions:
       v1:
-        replicaCount: 1
+        replicaCount: 2
         weight: 70
       v2:
         replicaCount: 1
         weight: 30
-    resources:
-      requests:
-        memory: "64Mi"
-        cpu: "50m"
-      limits:
-        memory: "128Mi"
-        cpu: "100m"
+    service:
+      port: 5001
+      targetPort: 5001
 
   inventory:
     versions:
       v1:
-        replicaCount: 1
+        replicaCount: 2
         weight: 80
       v2:
         replicaCount: 1
         weight: 20
-    resources:
-      requests:
-        memory: "64Mi"
-        cpu: "50m"
-      limits:
-        memory: "128Mi"
-        cpu: "100m"
+    service:
+      port: 5002
+      targetPort: 5002
 
   users:
     versions:
       v1:
-        replicaCount: 1
+        replicaCount: 2
         weight: 60
       v2:
         replicaCount: 1
         weight: 40
-    resources:
-      requests:
-        memory: "64Mi"
-        cpu: "50m"
-      limits:
-        memory: "128Mi"
-        cpu: "100m"
+    service:
+      port: 5003
+      targetPort: 5003
 
   reviews:
     versions:
       v1:
-        replicaCount: 1
+        replicaCount: 2
         weight: 50
       v2:
         replicaCount: 1
@@ -100,29 +88,21 @@ microservices:
       v3:
         replicaCount: 1
         weight: 10
-    resources:
-      requests:
-        memory: "64Mi"
-        cpu: "50m"
-      limits:
-        memory: "128Mi"
-        cpu: "100m"
+    service:
+      port: 5004
+      targetPort: 5004
 
   ratings:
     versions:
       v1:
-        replicaCount: 1
+        replicaCount: 2
         weight: 75
       v2:
         replicaCount: 1
         weight: 25
-    resources:
-      requests:
-        memory: "64Mi"
-        cpu: "50m"
-      limits:
-        memory: "128Mi"
-        cpu: "100m"
+    service:
+      port: 5005
+      targetPort: 5005
 
 istio:
   enabled: true
@@ -131,10 +111,10 @@ istio:
       - "stock-app-staging.yourcompany.com"
 
   virtualService:
-    timeout: 15s
+    timeout: 30s
     retries:
-      attempts: 2
-      perTryTimeout: 5s
+      attempts: 3
+      perTryTimeout: 10s
     faultInjection:
       enabled: true
       delay:
@@ -149,12 +129,13 @@ istio:
     trafficPolicy:
       connectionPool:
         tcp:
-          maxConnections: 5
+          maxConnections: 20
         http:
-          http1MaxPendingRequests: 5
-          maxRequestsPerConnection: 2
+          http1MaxPendingRequests: 20
+          maxRequestsPerConnection: 5
       outlierDetection:
-        consecutive5xxErrors: 2
+        consecutive5xxErrors: 3
+        consecutiveGatewayErrors: 3
         interval: 30s
         baseEjectionTime: 30s
         maxEjectionPercent: 50
@@ -170,13 +151,12 @@ monitoring:
   enabled: true
   serviceMonitor:
     enabled: true
-    interval: 30s
+    interval: 15s
     path: /metrics
 
 autoscaling:
-  enabled: false   # Disabled to avoid CPU pressure in staging
-  minReplicas: 1
-  maxReplicas: 3
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
   targetCPUUtilizationPercentage: 80
   targetMemoryUtilizationPercentage: 80
-

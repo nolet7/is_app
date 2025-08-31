@@ -1,0 +1,138 @@
+{{- if and .Values.istio.enabled .Values.istio.virtualService.enabled }}
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ include "stock-app.fullname" . }}-vs
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "stock-app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: istio-virtualservice
+spec:
+  hosts:
+  {{- range .Values.istio.gateway.hosts }}
+  - {{ . | quote }}
+  {{- end }}
+  gateways:
+  - {{ include "stock-app.fullname" . }}-gateway
+  http:
+  # Frontend routes
+  - match:
+    - uri:
+        prefix: "/"
+    route:
+    - destination:
+        host: {{ include "stock-app.fullname" . }}-frontend-service
+        port:
+          number: {{ .Values.frontend.service.port }}
+    timeout: {{ .Values.istio.virtualService.timeout }}
+    {{- with .Values.istio.virtualService.retries }}
+    retries:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ include "stock-app.fullname" . }}-api-gateway-vs
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "stock-app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: istio-virtualservice
+spec:
+  hosts:
+  - {{ include "stock-app.fullname" . }}-api-gateway-service
+  http:
+  - match:
+    - uri:
+        prefix: "/api"
+    route:
+    - destination:
+        host: {{ include "stock-app.fullname" . }}-api-gateway-service
+        port:
+          number: {{ .Values.apiGateway.service.port }}
+    timeout: 3s
+    retries:
+      attempts: 3
+      perTryTimeout: 1s
+    {{- if .Values.istio.virtualService.faultInjection.enabled }}
+    fault:
+      {{- with .Values.istio.virtualService.faultInjection.delay }}
+      delay:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.istio.virtualService.faultInjection.abort }}
+      abort:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- end }}
+
+---
+{{- range $serviceName := list "orders" "inventory" "users" "reviews" "ratings" }}
+{{- $serviceConfig := index $.Values.microservices $serviceName }}
+{{- if $serviceConfig.enabled }}
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ include "stock-app.fullname" $ }}-{{ $serviceName }}-vs
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "stock-app.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: istio-virtualservice
+spec:
+  hosts:
+  - {{ include "stock-app.fullname" $ }}-{{ $serviceName }}-service
+  http:
+  {{- if and (eq $serviceName "orders") (index $serviceConfig.versions "v2" "enabled") }}
+  - match:
+    - headers:
+        canary:
+          exact: "true"
+    route:
+    - destination:
+        host: {{ include "stock-app.fullname" $ }}-{{ $serviceName }}-service
+        subset: v2
+    timeout: 3s
+    retries:
+      attempts: 2
+      perTryTimeout: 1s
+  {{- end }}
+  {{- if and (eq $serviceName "reviews") (index $serviceConfig.versions "v3" "enabled") }}
+  - match:
+    - headers:
+        feature-flag:
+          exact: "v3-enabled"
+    route:
+    - destination:
+        host: {{ include "stock-app.fullname" $ }}-{{ $serviceName }}-service
+        subset: v3
+    timeout: 3s
+    retries:
+      attempts: 2
+      perTryTimeout: 1s
+  {{- end }}
+  - route:
+    {{- range $version, $config := $serviceConfig.versions }}
+    {{- if $config.enabled }}
+    - destination:
+        host: {{ include "stock-app.fullname" $ }}-{{ $serviceName }}-service
+        subset: {{ $version }}
+      weight: {{ $config.weight }}
+    {{- end }}
+    {{- end }}
+    timeout: 3s
+    retries:
+      attempts: 3
+      perTryTimeout: 1s
+    {{- if and $.Values.istio.virtualService.faultInjection.enabled (or (eq $serviceName "inventory") (eq $serviceName "reviews")) }}
+    fault:
+      delay:
+        percentage:
+          value: {{ if eq $serviceName "inventory" }}15.0{{ else }}20.0{{ end }}
+        fixedDelay: {{ if eq $serviceName "inventory" }}1s{{ else }}1.5s{{ end }}
+    {{- end }}
+
+---
+{{- end }}
+{{- end }}
+{{- end }}

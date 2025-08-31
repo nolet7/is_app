@@ -1,0 +1,214 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: docker.io
+  REGISTRY_USERNAME: noletengine
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      git-sha: ${{ steps.meta.outputs.labels }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ env.REGISTRY_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+    
+    - name: Build and push Frontend
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.frontend
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-frontend:${{ github.sha }},${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-frontend:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: Build and push API Gateway
+      uses: docker/build-push-action@v5
+      with:
+        context: ./api-gateway
+        file: ./api-gateway/Dockerfile
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-api-gateway:${{ github.sha }},${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-api-gateway:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: Build and push Orders Service
+      uses: docker/build-push-action@v5
+      with:
+        context: ./services/orders
+        file: ./services/orders/Dockerfile
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-orders:${{ github.sha }},${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-orders:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: Build and push Inventory Service
+      uses: docker/build-push-action@v5
+      with:
+        context: ./services/inventory
+        file: ./services/inventory/Dockerfile
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-inventory:${{ github.sha }},${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-inventory:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: Build and push Users Service
+      uses: docker/build-push-action@v5
+      with:
+        context: ./services/users
+        file: ./services/users/Dockerfile
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-users:${{ github.sha }},${{ env.REGISTRY_USERNAME }}/stock-users:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: Build and push Reviews Service
+      uses: docker/build-push-action@v5
+      with:
+        context: ./services/reviews
+        file: ./services/reviews/Dockerfile
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-reviews:${{ github.sha }},${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-reviews:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: Build and push Ratings Service
+      uses: docker/build-push-action@v5
+      with:
+        context: ./services/ratings
+        file: ./services/ratings/Dockerfile
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-ratings:${{ github.sha }},${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-ratings:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    environment: staging
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Configure kubectl for staging
+      run: |
+        echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig
+        export KUBECONFIG=kubeconfig
+        kubectl config current-context
+    
+    - name: Install Helm
+      uses: azure/setup-helm@v3
+      with:
+        version: '3.12.0'
+    
+    - name: Deploy to staging
+      run: |
+        export KUBECONFIG=kubeconfig
+        ./scripts/deploy-helm.sh stage staging ${{ github.sha }}
+    
+    - name: Run smoke tests
+      run: |
+        export KUBECONFIG=kubeconfig
+        # Wait for deployment to be ready
+        kubectl wait --for=condition=available --timeout=300s deployment --all -n staging
+        
+        # Get ingress URL or use port-forward for testing
+        kubectl port-forward svc/stock-app-frontend-service 8080:80 -n staging &
+        sleep 10
+        
+        # Basic smoke tests
+        curl -f http://localhost:8080/health || exit 1
+        echo "✅ Staging deployment smoke tests passed"
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build, deploy-staging]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Configure kubectl for production
+      run: |
+        echo "${{ secrets.KUBE_CONFIG_PROD }}" | base64 -d > kubeconfig
+        export KUBECONFIG=kubeconfig
+        kubectl config current-context
+    
+    - name: Install Helm
+      uses: azure/setup-helm@v3
+      with:
+        version: '3.12.0'
+    
+    - name: Deploy to production
+      run: |
+        export KUBECONFIG=kubeconfig
+        ./scripts/deploy-helm.sh prod production ${{ github.sha }}
+    
+    - name: Run production health checks
+      run: |
+        export KUBECONFIG=kubeconfig
+        # Wait for deployment to be ready
+        kubectl wait --for=condition=available --timeout=600s deployment --all -n production
+        
+        # Verify all services are healthy
+        kubectl get pods -n production
+        echo "✅ Production deployment completed successfully"
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: '${{ env.REGISTRY }}/${{ env.REGISTRY_USERNAME }}/stock-frontend:${{ github.sha }}'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'

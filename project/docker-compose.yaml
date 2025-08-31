@@ -1,0 +1,154 @@
+version: '3.8'
+
+services:
+  # Frontend
+  frontend:
+    build: 
+      context: ./
+      dockerfile: ./Dockerfile.frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+    networks:
+      - app-network
+
+  # API Gateway
+  api-gateway:
+    build: 
+      context: ./api-gateway
+      dockerfile: ./Dockerfile
+    ports:
+      - "3001:3001"
+    depends_on:
+      - inventory-v1
+      - inventory-v2
+      - orders-v1
+      - orders-v2
+      - users-v1
+      - users-v2
+      - reviews-v1
+      - reviews-v2
+      - reviews-v3
+      - ratings-v1
+      - ratings-v2
+    environment:
+      - INVENTORY_SERVICE_URL=http://inventory-v1:5002
+      - ORDERS_SERVICE_URL=http://orders-v1:5001
+      - USERS_SERVICE_URL=http://users-v1:5003
+      - REVIEWS_SERVICE_URL=http://reviews-v1:5004
+      - RATINGS_SERVICE_URL=http://ratings-v1:5005
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - app-network
+
+  # Inventory Service - Version 1
+  inventory-v1:
+    build: ./services/inventory
+    environment:
+      - SERVICE_VERSION=v1
+      - PORT=5002
+    networks:
+      - app-network
+
+  # Inventory Service - Version 2
+  inventory-v2:
+    build: ./services/inventory
+    environment:
+      - SERVICE_VERSION=v2
+      - PORT=5002
+    networks:
+      - app-network
+
+  # Orders Service - Version 1
+  orders-v1:
+    build: ./services/orders
+    environment:
+      - SERVICE_VERSION=v1
+      - PORT=5001
+    networks:
+      - app-network
+
+  # Orders Service - Version 2
+  orders-v2:
+    build: ./services/orders
+    environment:
+      - SERVICE_VERSION=v2
+      - PORT=5001
+    networks:
+      - app-network
+
+  # Users Service - Version 1
+  users-v1:
+    build: ./services/users
+    environment:
+      - SERVICE_VERSION=v1
+      - PORT=5003
+    networks:
+      - app-network
+
+  # Users Service - Version 2
+  users-v2:
+    build: ./services/users
+    environment:
+      - SERVICE_VERSION=v2
+      - PORT=5003
+    networks:
+      - app-network
+
+  # Reviews Service - Version 1
+  reviews-v1:
+    build: ./services/reviews
+    environment:
+      - SERVICE_VERSION=v1
+      - PORT=5004
+    networks:
+      - app-network
+
+  # Reviews Service - Version 2
+  reviews-v2:
+    build: ./services/reviews
+    environment:
+      - SERVICE_VERSION=v2
+      - PORT=5004
+    networks:
+      - app-network
+
+  # Reviews Service - Version 3
+  reviews-v3:
+    build: ./services/reviews
+    environment:
+      - SERVICE_VERSION=v3
+      - PORT=5004
+    networks:
+      - app-network
+
+  # Ratings Service - Version 1
+  ratings-v1:
+    build: ./services/ratings
+    environment:
+      - SERVICE_VERSION=v1
+      - PORT=5005
+    networks:
+      - app-network
+
+  # Ratings Service - Version 2
+  ratings-v2:
+    build: ./services/ratings
+    environment:
+      - SERVICE_VERSION=v2
+      - PORT=5005
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

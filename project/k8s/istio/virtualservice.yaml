@@ -1,0 +1,221 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: stock-app-vs
+  labels:
+    app: stock-app
+spec:
+  hosts:
+  - "*"
+  gateways:
+  - stock-app-gateway
+  http:
+  # Frontend routes
+  - match:
+    - uri:
+        prefix: "/"
+    route:
+    - destination:
+        host: frontend-service
+        port:
+          number: 80
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: api-gateway-vs
+  labels:
+    app: stock-app
+spec:
+  hosts:
+  - api-gateway-service
+  http:
+  - match:
+    - uri:
+        prefix: "/api"
+    route:
+    - destination:
+        host: api-gateway-service
+        port:
+          number: 3001
+    timeout: 3s
+    retries:
+      attempts: 3
+      perTryTimeout: 1s
+    fault:
+      delay:
+        percentage:
+          value: 10.0
+        fixedDelay: 2s
+      abort:
+        percentage:
+          value: 5.0
+        httpStatus: 503
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: orders-vs
+  labels:
+    app: stock-app
+spec:
+  hosts:
+  - orders-service
+  http:
+  - match:
+    - headers:
+        canary:
+          exact: "true"
+    route:
+    - destination:
+        host: orders-service
+        subset: v2
+    timeout: 3s
+    retries:
+      attempts: 2
+      perTryTimeout: 1s
+  - route:
+    - destination:
+        host: orders-service
+        subset: v1
+      weight: 70
+    - destination:
+        host: orders-service
+        subset: v2
+      weight: 30
+    timeout: 3s
+    retries:
+      attempts: 3
+      perTryTimeout: 1s
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: inventory-vs
+  labels:
+    app: stock-app
+spec:
+  hosts:
+  - inventory-service
+  http:
+  - route:
+    - destination:
+        host: inventory-service
+        subset: v1
+      weight: 80
+    - destination:
+        host: inventory-service
+        subset: v2
+      weight: 20
+    timeout: 3s
+    retries:
+      attempts: 3
+      perTryTimeout: 1s
+    fault:
+      delay:
+        percentage:
+          value: 15.0
+        fixedDelay: 1s
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: users-vs
+  labels:
+    app: stock-app
+spec:
+  hosts:
+  - users-service
+  http:
+  - route:
+    - destination:
+        host: users-service
+        subset: v1
+      weight: 60
+    - destination:
+        host: users-service
+        subset: v2
+      weight: 40
+    timeout: 3s
+    retries:
+      attempts: 3
+      perTryTimeout: 1s
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: reviews-vs
+  labels:
+    app: stock-app
+spec:
+  hosts:
+  - reviews-service
+  http:
+  - match:
+    - headers:
+        feature-flag:
+          exact: "v3-enabled"
+    route:
+    - destination:
+        host: reviews-service
+        subset: v3
+    timeout: 3s
+    retries:
+      attempts: 2
+      perTryTimeout: 1s
+  - route:
+    - destination:
+        host: reviews-service
+        subset: v1
+      weight: 50
+    - destination:
+        host: reviews-service
+        subset: v2
+      weight: 40
+    - destination:
+        host: reviews-service
+        subset: v3
+      weight: 10
+    timeout: 3s
+    retries:
+      attempts: 3
+      perTryTimeout: 1s
+    fault:
+      delay:
+        percentage:
+          value: 20.0
+        fixedDelay: 1.5s
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: ratings-vs
+  labels:
+    app: stock-app
+spec:
+  hosts:
+  - ratings-service
+  http:
+  - route:
+    - destination:
+        host: ratings-service
+        subset: v1
+      weight: 75
+    - destination:
+        host: ratings-service
+        subset: v2
+      weight: 25
+    timeout: 3s
+    retries:
+      attempts: 3
+      perTryTimeout: 1s

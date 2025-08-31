@@ -1,0 +1,156 @@
+# Staging environment values
+global:
+  env: staging
+  imageTag: staging-latest
+  imagePullPolicy: Always
+
+frontend:
+  replicaCount: 2
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/rewrite-target: /
+      cert-manager.io/cluster-issuer: "letsencrypt-staging"
+    hosts:
+      - host: stock-app-staging.yourcompany.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: stock-app-staging-tls
+        hosts:
+          - stock-app-staging.yourcompany.com
+  
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+apiGateway:
+  replicaCount: 2
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "400m"
+
+microservices:
+  orders:
+    versions:
+      v1:
+        replicaCount: 2
+        weight: 70
+      v2:
+        replicaCount: 1
+        weight: 30
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+  
+  inventory:
+    versions:
+      v1:
+        replicaCount: 2
+        weight: 80
+      v2:
+        replicaCount: 1
+        weight: 20
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+  
+  users:
+    versions:
+      v1:
+        replicaCount: 2
+        weight: 60
+      v2:
+        replicaCount: 1
+        weight: 40
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+  
+  reviews:
+    versions:
+      v1:
+        replicaCount: 2
+        weight: 50
+      v2:
+        replicaCount: 1
+        weight: 40
+      v3:
+        replicaCount: 1
+        weight: 10
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+  
+  ratings:
+    versions:
+      v1:
+        replicaCount: 2
+        weight: 75
+      v2:
+        replicaCount: 1
+        weight: 25
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+
+istio:
+  enabled: true
+  gateway:
+    hosts:
+      - "stock-app-staging.yourcompany.com"
+  virtualService:
+    faultInjection:
+      enabled: true
+      delay:
+        percentage: 5.0
+        fixedDelay: 1s
+      abort:
+        percentage: 2.0
+        httpStatus: 503
+  peerAuthentication:
+    mtlsMode: STRICT
+  authorizationPolicy:
+    enabled: true
+
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 15s
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70

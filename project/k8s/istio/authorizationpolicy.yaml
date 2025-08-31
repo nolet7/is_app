@@ -1,0 +1,125 @@
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: orders-authz
+  labels:
+    app: stock-app
+spec:
+  selector:
+    matchLabels:
+      app: orders
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/default/sa/default"]
+  - when:
+    - key: request.headers[x-user]
+      values: ["allowed-user"]
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: inventory-authz
+  labels:
+    app: stock-app
+spec:
+  selector:
+    matchLabels:
+      app: inventory
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/default/sa/default"]
+  - when:
+    - key: request.headers[x-user]
+      values: ["allowed-user"]
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: users-authz
+  labels:
+    app: stock-app
+spec:
+  selector:
+    matchLabels:
+      app: users
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/default/sa/default"]
+  - when:
+    - key: request.headers[x-user]
+      values: ["allowed-user"]
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: reviews-authz
+  labels:
+    app: stock-app
+spec:
+  selector:
+    matchLabels:
+      app: reviews
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/default/sa/default"]
+  - when:
+    - key: request.headers[x-user]
+      values: ["allowed-user"]
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: ratings-authz
+  labels:
+    app: stock-app
+spec:
+  selector:
+    matchLabels:
+      app: ratings
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/default/sa/default"]
+  - when:
+    - key: request.headers[x-user]
+      values: ["allowed-user"]
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: frontend-authz
+  labels:
+    app: stock-app
+spec:
+  selector:
+    matchLabels:
+      app: frontend
+  rules:
+  - {}  # Allow all traffic to frontend
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: gateway-authz
+  labels:
+    app: stock-app
+spec:
+  selector:
+    matchLabels:
+      app: api-gateway
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/default/sa/default"]
+    - source:
+        namespaces: ["istio-system"]

@@ -39,6 +39,9 @@ apiGateway:
     limits:
       memory: "512Mi"
       cpu: "400m"
+  service:
+    port: 3001
+    targetPort: 3001
 
 microservices:
   orders:
@@ -52,6 +55,13 @@ microservices:
     service:
       port: 5001
       targetPort: 5001
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
 
   inventory:
     versions:
@@ -64,6 +74,13 @@ microservices:
     service:
       port: 5002
       targetPort: 5002
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
 
   users:
     versions:
@@ -76,6 +93,13 @@ microservices:
     service:
       port: 5003
       targetPort: 5003
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
 
   reviews:
     versions:
@@ -91,6 +115,13 @@ microservices:
     service:
       port: 5004
       targetPort: 5004
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
 
   ratings:
     versions:
@@ -103,6 +134,13 @@ microservices:
     service:
       port: 5005
       targetPort: 5005
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
 
 istio:
   enabled: true
@@ -147,6 +185,10 @@ istio:
   authorizationPolicy:
     enabled: true
 
+serviceAccount:
+  create: true
+  name: ""
+
 monitoring:
   enabled: true
   serviceMonitor:
@@ -160,3 +202,4 @@ autoscaling:
   maxReplicas: 5
   targetCPUUtilizationPercentage: 80
   targetMemoryUtilizationPercentage: 80
+

@@ -176,6 +176,11 @@ microservices:
       targetPort: 5005
 istio:
   enabled: false # Dev is kept simple: no Istio sidecars, no mTLS
+  destinationRule:
+    enabled: true
+  authorizationPolicy:
+    allowedUsers:
+      - allowed-user
 monitoring:
   enabled: false # Dev doesn’t run Prometheus/Grafana
 autoscaling:

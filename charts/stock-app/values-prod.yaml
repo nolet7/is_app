@@ -172,6 +172,10 @@ istio:
     mtlsMode: STRICT
   authorizationPolicy:
     enabled: true
+    allowedUsers:
+      - allowed-user
+  destinationRule:
+    enabled: true
 serviceAccount:
   create: true
   name: ""

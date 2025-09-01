@@ -187,6 +187,11 @@ microservices:
 # Istio (disabled in dev baseline to avoid sidecar overhead)
 istio:
   enabled: false
+  destinationRule:
+    enabled: true
+  authorizationPolicy:
+    allowedUsers:
+      - allowed-user
 # Monitoring (disabled for dev baseline)
 monitoring:
   enabled: false
